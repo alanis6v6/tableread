@@ -1,0 +1,37 @@
+[
+  {
+    "round": 1,
+    "player_raw": "我走進老宅的客廳，想找馬提亞斯聊聊，順便問問要不要玩記憶遊戲。",
+    "char_raw": "[HEAD]\nFOCUS: 今日焦點・與馬提亞斯的對話\nCHAPTER: 第一章\nTIME: 2026/08/27 21:00\nLOC: 老宅客廳\nWEATHER: 微涼有風\nLEAD: 風從天井灌進來\n[/HEAD]\n\n[BODY]\n馬提亞斯從廚房探出頭，手裡還拿著剛擦乾的杯子。「怎麼了？」\n[/BODY]\n\n<!-- <VariableUpdateLog><JSONPatch>\n[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/好感度_馬提亞斯\",\n    \"value\": 12\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/關係階段_馬提亞斯\",\n    \"value\": \"動搖\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/衣著/你\",\n    \"value\": \"家居服\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/目前互動焦點\",\n    \"value\": \"馬提亞斯\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/page\",\n    \"value\": 2\n  }\n]\n</JSONPatch></VariableUpdateLog> -->"
+  },
+  {
+    "round": 2,
+    "player_raw": "今天遇到阿霆，聊了一下以前的事。",
+    "char_raw": "[MEMORY]\nWHEN: 深夜\nRULE: 翻兩張牌配對成功可再翻一次\nBOARD:\n🂠 🂠 🂠 🂠\n🂠 🂠 🂠 🂠\nM_PAIRS: 1\nM_WATCH: 沒在看\nT_PAIRS: 0\nT_WATCH: 專注\nL_PAIRS: 0\nL_WATCH: 不在場\nU_PAIRS: 1\nU_WATCH: 專心\nM_LINE: 馬提亞斯 隨便你\nT_LINE: 阿霆 認真點\nL_LINE: 不在場 -\nNOTE: 氣氛微妙\nLEAD: 輪到你翻牌\n[/MEMORY]\n\n[BODY]\n阿霆笑著把牌洗了一次，「輸的人請喝手搖。」\n[/BODY]\n\n<!-- <VariableUpdateLog><JSONPatch>\n[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/好感度_馬提亞斯\",\n    \"value\": 16\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/線索碎片\",\n    \"value\": 1\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/page\",\n    \"value\": 3\n  }\n]\n</JSONPatch></VariableUpdateLog> -->"
+  },
+  {
+    "round": 3,
+    "player_raw": "趁大家都不在，我偷偷翻找書房的抽屜。",
+    "char_raw": "[FIND]\nWHERE: 書房\nWHEN: 深夜\nICON: 📓\nITEM: 舊筆記本\nDETAIL: 母親的筆跡\nTEXT: 翻找抽屜時發現的\nPIPS: ●●○\nGOT: 1\nTOTAL: 3\n[/FIND]\n\n[BODY]\n抽屜卡住了一下，用力一拉才打開。裡面是一本舊筆記本。\n[/BODY]"
+  },
+  {
+    "round": 4,
+    "player_raw": "晚上跟馬提亞斯一起看電視，什麼都沒特別聊。",
+    "char_raw": "[WHEEL]\nROT: 45deg\nROMAN: II\nLABEL: 動搖\nNOTE: 保持警戒\n[/WHEEL]\n\n[FOOT]\nSCENE: 老宅客廳\nACT: 深夜對話\nCLOCK: 23:10\nM: 20\nT: 24\nL: 18\nHEAT: 微溫\nU_WEAR: 家居服\nM_WEAR: 睡衣\nT_WEAR: 運動服\nL_WEAR: 便服\nU_POSE: 坐在沙發\nM_POSE: 靠在門框\nT_POSE: 站在窗邊\nL_POSE: 倚牆\nVOICE: 低沉\nMOOD: 平靜中帶點緊繃\n[/FOOT]\n\n[BODY]\n電視的聲音很小，兩人之間的沉默不算難受。\n[/BODY]\n\n<!-- <VariableUpdateLog><JSONPatch>\n[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/好感度_馬提亞斯\",\n    \"value\": 20\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/衣著/馬提亞斯\",\n    \"value\": \"休閒服\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/page\",\n    \"value\": 5\n  }\n]\n</JSONPatch></VariableUpdateLog> -->"
+  },
+  {
+    "round": 5,
+    "player_raw": "我問馬提亞斯，你當年到底是怎麼認識我媽的？",
+    "char_raw": "[BODY]\n馬提亞斯放下杯子，用詞忽然變得像在念一份不容出錯的報告。\n[/BODY]\n\n<!-- <VariableUpdateLog><JSONPatch>\n[\n  { \"op\": \"replace\", \"path\": \"/好感度_馬提亞斯\", \"value\": 22, },\n]\n</JSONPatch></VariableUpdateLog> -->"
+  },
+  {
+    "round": 6,
+    "player_raw": "後來我又回去翻找書房，順便問馬提亞斯要不要再玩一次記憶遊戲。",
+    "char_raw": "[BODY]\n馬提亞斯挑了下眉，「你倒是還記得規則。」\n[/BODY]\n\n<!-- <VariableUpdateLog><JSONPatch>\n[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/好感度_馬提亞斯\",\n    \"value\": 24\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/線索碎片\",\n    \"value\": 2\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/page\",\n    \"value\": 7\n  }\n]\n</JSONPatch></VariableUpdateLog> -->"
+  },
+  {
+    "round": 7,
+    "player_raw": "阿霆傳訊息說想約吃飯。",
+    "char_raw": "[HEAD]\nFOCUS: 今日焦點・阿霆的訊息\nCHAPTER: 第二章\nTIME: 2026/08/28 12:00\nLOC: 書房\nWEATHER: 晴\nLEAD: 手機震動了一下\n[/HEAD]\n\n[BODY]\n螢幕亮起，是阿霆傳來的訊息：「有空嗎？」\n[/BODY]\n\n<!-- <VariableUpdateLog><JSONPatch>\n[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/好感度_阿霆\",\n    \"value\": 38\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/關係階段_阿霆\",\n    \"value\": \"破功\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/page\",\n    \"value\": 8\n  }\n]\n</JSONPatch></VariableUpdateLog> -->"
+  }
+]
