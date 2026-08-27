@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tableread · 創作者模式</title>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<header class="topbar">
+  <h1>tableread</h1>
+  <div id="webmcp-status" class="badge badge-pending">檢查 WebMCP 支援中…</div>
+</header>
+
+<main class="layout">
+  <section class="panel" id="panel-agent">
+    <h2>Agent 呼叫紀錄</h2>
+    <p class="hint">
+      這裡不是聊天室——網站本身不呼叫任何 LLM。這是呼叫此頁面 WebMCP 工具的 Agent（或你在
+      DevTools 的 WebMCP 面板手動呼叫）留下的活動紀錄，用來確認工具真的有被呼叫、參數與回傳是否正確。
+    </p>
+    <div id="activity-log" class="scroll-list"></div>
+  </section>
+
+  <section class="panel" id="panel-draft">
+    <h2>草稿即時預覽</h2>
+    <h3>撰寫進度檢核表</h3>
+    <table class="checklist-table">
+      <tbody id="checklist-body"></tbody>
+    </table>
+    <h3>卡片欄位</h3>
+    <div id="draft-fields" class="draft-fields"></div>
+  </section>
+
+  <section class="panel panel-wide" id="panel-autotest">
+    <div class="autotest-header">
+      <h2>自動測卡</h2>
+      <label>
+        情境：
+        <select id="scenario-select"></select>
+      </label>
+    </div>
+    <div class="autotest-body">
+      <div class="autotest-col">
+        <h3>對話回放</h3>
+        <div id="transcript" class="scroll-list"></div>
+      </div>
+      <div class="autotest-col">
+        <h3>QA 摘要</h3>
+        <div id="qa-summary" class="scroll-list"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
