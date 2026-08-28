@@ -66,6 +66,22 @@ test("commitRound applies JSON Patch and strips it from the rendered HTML", () =
   assert.equal(transcript[1].char_html, "角色露出微笑。\n");
 });
 
+test("commitRound reports a warning when the JSON Patch block is present but malformed -- doesn't silently swallow it", () => {
+  const session = createPlaytestSession(miniCard(), { id: "x", text: "開場白。" });
+  const charText = [
+    "角色露出微笑。",
+    "<!-- <VariableUpdateLog><JSONPatch>",
+    '[{ "op": "replace", "path": "/好感度", "value": 10, }]', // trailing comma -> invalid JSON
+    "</JSONPatch></VariableUpdateLog> -->",
+  ].join("\n");
+
+  const result = session.commitRound(1, "你好", charText);
+  assert.equal(result.patch_found, false);
+  assert.deepEqual(result.vars_after, {}); // malformed patch never applied
+  assert.equal(result.warnings.length, 1);
+  assert.match(result.warnings[0], /could not parse JSON Patch block/);
+});
+
 test("getTranscript returns independent copies (mutating the result doesn't affect the session)", () => {
   const session = createPlaytestSession(miniCard(), { id: "x", text: "開場白。" });
   const t1 = session.getTranscript();
