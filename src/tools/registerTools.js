@@ -11,12 +11,14 @@ import { assembleCard } from "./cardAssembler.js";
 import { createScenarioStore } from "./scenarioStore.js";
 import { createSessionRegistry } from "./sessionRegistry.js";
 import { createActivityLog } from "./activityLog.js";
+import { createCompareScenarios } from "./compareScenarios.js";
 import { CHECKLIST_ASPECTS, CHECKLIST_ASPECT_KEYS } from "./checklist.js";
 
 export const draftStore = createDraftStore();
 export const scenarioStore = createScenarioStore(draftStore);
 export const sessionRegistry = createSessionRegistry(draftStore, scenarioStore);
 export const activityLog = createActivityLog();
+export const compareScenariosLogic = createCompareScenarios(draftStore, scenarioStore, sessionRegistry, activityLog);
 
 function textResult(payload, isError) {
   const result = { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
@@ -161,6 +163,24 @@ export function buildToolDefinitions() {
         required: ["scenario_id"],
       },
       ({ scenario_id }) => sessionRegistry.getTranscript(scenario_id),
+    ),
+
+    defineTool(
+      "compare_scenarios",
+      "遊戲商模式（多情境比較）用的唯讀工具：把一批已經跑過的 scenario_id 攤開成一份逐情境比較，並算出跨情境的世界書觸發差異。這個工具只讀，不會替你執行任何情境——建議在多個情境都已經各自完整跑過一輪 run_scenario → get_playtest_context/commit_playtest_round 之後才呼叫，才有東西可比。對於還沒 run_scenario 過的 scenario_id，不會讓整次呼叫失敗，只會在對應那一筆標記 {scenario_id, error}。回傳的 world_entries_triggered_in_some（有些情境觸發過、有些沒有）是最值得注意的 QA 訊號——代表同一份世界書在不同情境下觸發不一致，值得檢查關鍵詞/常駐設定是否符合預期。",
+      {
+        type: "object",
+        properties: {
+          scenario_ids: {
+            type: "array",
+            items: { type: "string" },
+            minItems: 1,
+            description: "要比較的情境 id 列表，來自 list_scenarios/add_scenario 回傳的 id。",
+          },
+        },
+        required: ["scenario_ids"],
+      },
+      ({ scenario_ids }) => compareScenariosLogic.compareScenarios(scenario_ids),
     ),
   ];
 }

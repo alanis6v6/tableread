@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Zero-dependency static file server for local development. Serves the repo
-// root so ES module imports in public/main.js (e.g. "../src/tools/...")
-// resolve the same way on disk as they do over HTTP. WebMCP's
+// root so ES module imports in main.js (e.g. "./src/tools/...") resolve the
+// same way on disk as they do over HTTP. WebMCP's
 // document.modelContext requires a secure context; http://localhost counts
 // as one, so this is all local development needs -- no HTTPS/cert setup.
 import { createServer } from "node:http";
@@ -26,7 +26,7 @@ const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, "http://localhost");
     let pathname = decodeURIComponent(url.pathname);
-    if (pathname === "/") pathname = "/public/index.html";
+    if (pathname === "/") pathname = "/index.html";
 
     const filePath = normalize(join(root, pathname));
     if (!filePath.startsWith(root)) {
