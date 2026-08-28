@@ -4,9 +4,10 @@ import {
   scenarioStore,
   sessionRegistry,
   activityLog,
-} from "../src/tools/registerTools.js";
-import { CHECKLIST_ASPECTS, CHECKLIST_STATUS_ICON } from "../src/tools/checklist.js";
-import { SCALAR_FIELD_KEYS, ARRAY_FIELD_KEYS } from "../src/tools/draftStore.js";
+  compareScenariosLogic,
+} from "./src/tools/registerTools.js";
+import { CHECKLIST_ASPECTS, CHECKLIST_STATUS_ICON } from "./src/tools/checklist.js";
+import { SCALAR_FIELD_KEYS, ARRAY_FIELD_KEYS } from "./src/tools/draftStore.js";
 
 const FIELD_LABELS = {
   name: "name",
@@ -240,6 +241,142 @@ function renderAutotest() {
   }
 }
 
+// ---- Panel: 遊戲商模式（多情境比較） --------------------------------------
+// Same draftStore/scenarioStore/sessionRegistry/activityLog as creator mode --
+// this is a second set of panels reading the same in-memory stores, not a
+// second page (a second HTML document would reset all that in-memory state
+// on navigation).
+
+const compareSelected = new Set(); // scenario ids currently checked for comparison
+
+function renderScenarioList() {
+  const container = document.getElementById("scenario-list");
+  const ids = currentScenarioIds();
+  container.innerHTML = "";
+  if (ids.length === 0) {
+    container.appendChild(
+      el("div", { class: "hint", text: "（尚無情境，先在創作者模式寫 first_mes，或呼叫 add_scenario。）" }),
+    );
+    return;
+  }
+  for (const id of ids) {
+    const scenario = scenarioStore.findScenario(id);
+    const label = scenario ? scenario.label : id;
+    const transcript = sessionRegistry.getTranscript(id);
+    const status = transcript.ok
+      ? `已執行 ${transcript.rounds.filter((r) => r.round > 0).length} 輪`
+      : "尚未執行";
+
+    const checkbox = el("input", { type: "checkbox" });
+    checkbox.checked = compareSelected.has(id);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) compareSelected.add(id);
+      else compareSelected.delete(id);
+      renderCompareCards();
+      renderCompareSummary();
+    });
+
+    container.appendChild(
+      el("label", { class: "scenario-row" }, [
+        checkbox,
+        el("span", { class: "scenario-label", text: `${label}（${id}）` }),
+        el("span", { class: "scenario-status", text: status }),
+      ]),
+    );
+  }
+}
+
+function renderCompareCards() {
+  const container = document.getElementById("compare-cards");
+  container.innerHTML = "";
+  const ids = [...compareSelected];
+  if (ids.length === 0) {
+    container.appendChild(el("div", { class: "hint", text: "在左邊「情境清單管理」勾選至少一個情境來並排比較。" }));
+    return;
+  }
+  for (const id of ids) {
+    const scenario = scenarioStore.findScenario(id);
+    const label = scenario ? scenario.label : id;
+    const card = el("div", { class: "compare-card" }, [el("h4", { text: `${label}（${id}）` })]);
+
+    // Same source as renderAutotest(): sessionRegistry.getTranscript(id).
+    const transcript = sessionRegistry.getTranscript(id);
+    if (!transcript.ok) {
+      card.appendChild(el("div", { class: "hint", text: transcript.error }));
+      container.appendChild(card);
+      continue;
+    }
+
+    const lastRound = transcript.rounds[transcript.rounds.length - 1];
+    card.appendChild(el("div", { class: "round-label", text: `第 ${lastRound.round} 頁角色回應片段` }));
+    card.appendChild(el("div", { class: "compare-char", html: lastRound.char_html }));
+    card.appendChild(el("h4", { text: "目前變量" }));
+    card.appendChild(el("pre", { class: "compare-vars", text: JSON.stringify(lastRound.vars_snapshot, null, 2) }));
+    container.appendChild(card);
+  }
+}
+
+function renderCompareSummary() {
+  const container = document.getElementById("compare-summary");
+  container.innerHTML = "";
+  const ids = [...compareSelected];
+  if (ids.length === 0) {
+    container.appendChild(el("div", { class: "hint", text: "勾選情境後才能算跨情境比較摘要。" }));
+    return;
+  }
+
+  // Calls the compareScenarios logic directly, same as renderAutotest() calls
+  // sessionRegistry directly -- no need to go through the WebMCP execute() wrapper.
+  const result = compareScenariosLogic.compareScenarios(ids);
+
+  if (result.world_entries_triggered_in_some.length > 0) {
+    container.appendChild(
+      el("div", {
+        class: "compare-alert",
+        text: `⚠ 觸發不一致的世界書條目（部分情境觸發、部分沒有，QA 重點）：${result.world_entries_triggered_in_some.join("、")}`,
+      }),
+    );
+  } else {
+    container.appendChild(
+      el("div", { class: "compare-alert compare-alert-ok", text: "沒有偵測到跨情境觸發不一致的世界書條目。" }),
+    );
+  }
+
+  const okScenarios = result.scenarios.filter((s) => !s.error);
+  const errorScenarios = result.scenarios.filter((s) => s.error);
+  if (errorScenarios.length > 0) {
+    container.appendChild(
+      el("div", { class: "hint", text: `尚未執行、無法比較：${errorScenarios.map((s) => s.scenario_id).join("、")}` }),
+    );
+  }
+
+  if (okScenarios.length > 0) {
+    const varKeys = [...new Set(okScenarios.flatMap((s) => Object.keys(s.final_vars || {})))];
+    const table = el("table", { class: "compare-table" });
+    table.appendChild(
+      el("thead", {}, [
+        el("tr", {}, [el("th", { text: "變量" }), ...okScenarios.map((s) => el("th", { text: s.label }))]),
+      ]),
+    );
+    const tbody = el("tbody");
+    if (varKeys.length === 0) {
+      tbody.appendChild(
+        el("tr", {}, [el("td", { text: "（尚無變量）", colspan: String(okScenarios.length + 1) })]),
+      );
+    }
+    for (const key of varKeys) {
+      tbody.appendChild(
+        el("tr", {}, [
+          el("td", { text: key }),
+          ...okScenarios.map((s) => el("td", { text: JSON.stringify(s.final_vars?.[key] ?? null) })),
+        ]),
+      );
+    }
+    table.appendChild(tbody);
+    container.appendChild(table);
+  }
+}
+
 // ---- Wiring --------------------------------------------------------------
 
 function renderAll() {
@@ -248,13 +385,36 @@ function renderAll() {
   renderActivityLog();
   renderScenarioSelect();
   renderAutotest();
+  renderScenarioList();
+  renderCompareCards();
+  renderCompareSummary();
 }
 
 draftStore.subscribe(renderAll);
 activityLog.subscribe(renderAll);
 document.getElementById("scenario-select").addEventListener("change", renderAutotest);
 
-window.__tableread = { draftStore, scenarioStore, sessionRegistry, activityLog };
+// ---- Mode switch (創作者模式 / 遊戲商模式) ---------------------------------
+// Both modes are panels within this one page sharing the same WebMCP tool
+// registration and the same draftStore/scenarioStore/sessionRegistry state --
+// a separate HTML page would reset all of that on navigation.
+
+const modeCreator = document.getElementById("mode-creator");
+const modeMerchant = document.getElementById("mode-merchant");
+const modeBtnCreator = document.getElementById("mode-btn-creator");
+const modeBtnMerchant = document.getElementById("mode-btn-merchant");
+
+function setMode(mode) {
+  const isMerchant = mode === "merchant";
+  modeCreator.classList.toggle("hidden", isMerchant);
+  modeMerchant.classList.toggle("hidden", !isMerchant);
+  modeBtnCreator.classList.toggle("active", !isMerchant);
+  modeBtnMerchant.classList.toggle("active", isMerchant);
+}
+modeBtnCreator.addEventListener("click", () => setMode("creator"));
+modeBtnMerchant.addEventListener("click", () => setMode("merchant"));
+
+window.__tableread = { draftStore, scenarioStore, sessionRegistry, activityLog, compareScenariosLogic };
 
 boot();
 renderAll();

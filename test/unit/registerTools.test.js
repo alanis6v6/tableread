@@ -14,9 +14,9 @@ async function call(tool, params) {
   return { isError: !!res.isError, payload: JSON.parse(res.content[0].text) };
 }
 
-test("all 9 tools are defined with name/description/inputSchema/execute", () => {
+test("all 10 tools are defined with name/description/inputSchema/execute", () => {
   const tools = buildToolDefinitions();
-  assert.equal(tools.length, 9);
+  assert.equal(tools.length, 10);
   for (const t of tools) {
     assert.equal(typeof t.name, "string");
     assert.ok(t.description.length > 20, `${t.name} needs a real description`);

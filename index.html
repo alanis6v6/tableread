@@ -3,16 +3,20 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>tableread · 創作者模式</title>
+<title>tableread</title>
 <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
 <header class="topbar">
   <h1>tableread</h1>
+  <div class="mode-switch" id="mode-switch">
+    <button type="button" class="mode-btn active" id="mode-btn-creator">創作者模式</button>
+    <button type="button" class="mode-btn" id="mode-btn-merchant">遊戲商模式（多情境比較）</button>
+  </div>
   <div id="webmcp-status" class="badge badge-pending">檢查 WebMCP 支援中…</div>
 </header>
 
-<main class="layout">
+<main class="layout" id="mode-creator">
   <section class="panel" id="panel-agent">
     <h2>Agent 呼叫紀錄</h2>
     <p class="hint">
@@ -50,6 +54,24 @@
         <div id="qa-summary" class="scroll-list"></div>
       </div>
     </div>
+  </section>
+</main>
+
+<main class="layout hidden" id="mode-merchant">
+  <section class="panel" id="panel-scenario-list">
+    <h2>情境清單管理</h2>
+    <p class="hint">勾選要拿去比較的情境，狀態欄顯示這個情境目前是否已經 run_scenario 過。</p>
+    <div id="scenario-list" class="scroll-list"></div>
+  </section>
+
+  <section class="panel panel-wide" id="panel-compare-cards">
+    <h2>多情境並排結果</h2>
+    <div id="compare-cards" class="compare-cards"></div>
+  </section>
+
+  <section class="panel panel-wide" id="panel-compare-summary">
+    <h2>跨情境比較摘要</h2>
+    <div id="compare-summary"></div>
   </section>
 </main>
 

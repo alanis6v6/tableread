@@ -20,7 +20,7 @@ test("status is 'unsupported' when document.modelContext doesn't exist", async (
   assert.equal(typeof document, "undefined");
   const result = await registerAllTools();
   assert.equal(result.status, "unsupported");
-  assert.equal(result.tools.length, 9);
+  assert.equal(result.tools.length, 10);
   assert.deepEqual(result.registered, []);
   assert.deepEqual(result.failures, []);
 });
@@ -31,7 +31,7 @@ test("status is 'ok' when every tool registers successfully", async () => {
     async () => {
       const result = await registerAllTools();
       assert.equal(result.status, "ok");
-      assert.equal(result.registered.length, 9);
+      assert.equal(result.registered.length, 10);
       assert.deepEqual(result.failures, []);
     },
   );
@@ -45,7 +45,7 @@ test("status is 'partial' when one tool's registerTool() throws but the rest sti
     async () => {
       const result = await registerAllTools();
       assert.equal(result.status, "partial");
-      assert.equal(result.registered.length, 8);
+      assert.equal(result.registered.length, 9);
       assert.equal(result.failures.length, 1);
       assert.equal(result.failures[0].name, "assemble_card");
       assert.match(result.failures[0].error, /boom/);
@@ -63,7 +63,7 @@ test("status is 'error' when every registerTool() call throws", async () => {
       const result = await registerAllTools();
       assert.equal(result.status, "error");
       assert.deepEqual(result.registered, []);
-      assert.equal(result.failures.length, 9);
+      assert.equal(result.failures.length, 10);
     },
   );
 });
