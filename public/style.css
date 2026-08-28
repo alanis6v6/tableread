@@ -35,6 +35,7 @@ body {
 }
 .badge-pending { background: #eee; color: #666; }
 .badge-ok { background: #e3f3e6; color: #2c7a3d; }
+.badge-warn { background: #fbf0d9; color: #92660f; }
 .badge-fail { background: #fbe4e4; color: #a3312f; }
 
 .layout {

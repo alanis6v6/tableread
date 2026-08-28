@@ -1,6 +1,5 @@
 import {
   registerAllTools,
-  buildToolDefinitions,
   draftStore,
   scenarioStore,
   sessionRegistry,
@@ -46,20 +45,45 @@ function el(tag, props = {}, children = []) {
 
 // ---- WebMCP registration ------------------------------------------------
 
+const STATUS_BADGE = {
+  ok: { className: "badge-ok", text: (r) => `WebMCP 已註冊 ${r.registered.length} 個工具` },
+  partial: {
+    className: "badge-warn",
+    text: (r) => `WebMCP 註冊部分失敗：成功 ${r.registered.length}/${r.tools.length} 個（詳見主控台）`,
+  },
+  error: {
+    className: "badge-fail",
+    text: (r) => `WebMCP 註冊全部失敗（${r.tools.length} 個工具皆失敗，詳見主控台）`,
+  },
+  timeout: {
+    className: "badge-fail",
+    text: () => "WebMCP 註冊逾時，可能是實驗性 API 尚未完全支援",
+  },
+  unsupported: {
+    className: "badge-fail",
+    text: () => "此瀏覽器/情境不支援 document.modelContext（需要 secure context，localhost 開發即可）",
+  },
+};
+
 async function boot() {
-  const status = document.getElementById("webmcp-status");
+  const badge = document.getElementById("webmcp-status");
   const result = await registerAllTools();
-  if (result.supported) {
-    status.textContent = `WebMCP 已註冊 ${result.tools.length} 個工具`;
-    status.className = "badge badge-ok";
-  } else {
-    status.textContent = "此瀏覽器/情境不支援 document.modelContext（需要 secure context，localhost 開發即可）";
-    status.className = "badge badge-fail";
+
+  const spec = STATUS_BADGE[result.status] ?? STATUS_BADGE.error;
+  badge.textContent = spec.text(result);
+  badge.className = `badge ${spec.className}`;
+
+  if (result.failures.length > 0) {
+    console.warn("[tableread] some WebMCP tools failed to register:", result.failures);
   }
+  if (result.status === "timeout") {
+    console.warn("[tableread] WebMCP registration timed out:", result.timeoutError);
+  }
+
   // Debug/manual-test hook: lets you drive the tools from the DevTools
   // Console (window.__tableread.tools) the same way the WebMCP panel would,
   // useful on Chromium builds that don't yet expose document.modelContext.
-  window.__tableread.tools = result.tools.length ? result.tools : buildToolDefinitions();
+  window.__tableread.tools = result.tools;
 }
 
 // ---- Panel: 草稿即時預覽 --------------------------------------------------

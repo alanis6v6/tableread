@@ -165,20 +165,77 @@ export function buildToolDefinitions() {
   ];
 }
 
+const REGISTER_TIMEOUT_MS = 4000;
+
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`registration did not finish within ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
  * Registers every tool with document.modelContext.registerTool(), if the
  * API is present (secure context required -- localhost is fine for dev,
- * otherwise HTTPS). Returns { supported: false } without throwing when the
- * API isn't available, so the rest of the page can still render.
+ * otherwise HTTPS).
+ *
+ * This is calling a brand-new, still-experimental browser API, so it's
+ * treated as unreliable on purpose: a single tool's registerTool() call
+ * throwing doesn't stop the rest from registering, and the whole batch is
+ * capped by a timeout so a call that never resolves can't leave the caller
+ * (the page's status badge) hanging forever with no way to tell "still
+ * checking" apart from "silently broken".
+ *
+ * Returns { status, tools, registered, failures, controller, timeoutError? }:
+ *   - status: "unsupported" (no document.modelContext at all), "ok" (every
+ *     tool registered), "partial" (some registered, some failed), "error"
+ *     (all failed), or "timeout" (didn't finish within REGISTER_TIMEOUT_MS).
+ *   - tools: the full DOM-free tool descriptor list (always populated, even
+ *     when unsupported/timed out, so callers like the debug console hook
+ *     can still exercise the underlying logic directly).
+ *   - registered / failures: tool names that succeeded / {name, error} that
+ *     didn't (best-effort on "timeout" -- reflects whatever completed before
+ *     the timeout fired).
+ *
+ * `timeoutMs` defaults to REGISTER_TIMEOUT_MS; it's an explicit parameter
+ * only so tests can use a short timeout instead of waiting out the real one.
  */
-export async function registerAllTools() {
-  if (typeof document === "undefined" || !document.modelContext?.registerTool) {
-    return { supported: false, controller: null, tools: [] };
-  }
-  const controller = new AbortController();
+export async function registerAllTools({ timeoutMs = REGISTER_TIMEOUT_MS } = {}) {
   const tools = buildToolDefinitions();
-  for (const tool of tools) {
-    await document.modelContext.registerTool(tool, { signal: controller.signal });
+
+  if (typeof document === "undefined" || !document.modelContext?.registerTool) {
+    return { status: "unsupported", controller: null, tools, registered: [], failures: [] };
   }
-  return { supported: true, controller, tools };
+
+  const controller = new AbortController();
+  const registered = [];
+  const failures = [];
+
+  async function registerSequentially() {
+    for (const tool of tools) {
+      try {
+        await document.modelContext.registerTool(tool, { signal: controller.signal });
+        registered.push(tool.name);
+      } catch (ex) {
+        failures.push({ name: tool.name, error: String(ex?.message ?? ex) });
+      }
+    }
+  }
+
+  try {
+    await withTimeout(registerSequentially(), timeoutMs);
+  } catch (ex) {
+    return {
+      status: "timeout",
+      controller,
+      tools,
+      registered,
+      failures,
+      timeoutError: String(ex?.message ?? ex),
+    };
+  }
+
+  const status = failures.length === 0 ? "ok" : registered.length === 0 ? "error" : "partial";
+  return { status, controller, tools, registered, failures };
 }
