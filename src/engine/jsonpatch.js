@@ -30,6 +30,13 @@ export function applyJsonPatch(varsState, patchOps) {
 /**
  * Finds the <VariableUpdateLog><JSONPatch> block in raw model output and
  * applies it to varsState. Returns { vars, patchFound, warning }.
+ *
+ * patchFound and warning are independent signals, not one derived from the
+ * other: no block in rawText at all is the normal "this turn didn't update
+ * variables" case -- patchFound: false, warning: null, nothing to report.
+ * warning is only ever set when a block IS present but its contents fail to
+ * JSON.parse -- that's the actual malformed-output case worth surfacing.
+ * Don't read "warnings is empty" as "patch_found was true".
  */
 export function extractAndApplyPatch(rawText, varsState) {
   const m = rawText.match(PATCH_BLOCK_RE);

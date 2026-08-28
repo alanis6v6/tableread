@@ -81,6 +81,27 @@ test("add_scenario then run_scenario against the custom scenario", async () => {
   assert.equal(started.payload.opening_text, "玩家一開始就很兇的情境");
 });
 
+test("commit_playtest_round reports a warning (not isError) when char_text has a malformed JSON Patch block", async () => {
+  const tools = buildToolDefinitions();
+  await call(byName(tools, "update_card_field"), { section: "first_mes", value: "開場白內容。" });
+  const scenarios = await call(byName(tools, "list_scenarios"), {});
+  const scenarioId = scenarios.payload.scenarios[0].id;
+  await call(byName(tools, "run_scenario"), { scenario_id: scenarioId, rounds: 1 });
+  await call(byName(tools, "get_playtest_context"), { scenario_id: scenarioId, round: 1 });
+
+  const commit = await call(byName(tools, "commit_playtest_round"), {
+    scenario_id: scenarioId,
+    round: 1,
+    player_text: "你好",
+    char_text:
+      '角色點頭致意。<!-- <VariableUpdateLog><JSONPatch>[{ "op": "replace", "path": "/好感度", "value": 10, }]</JSONPatch></VariableUpdateLog> -->',
+  });
+  assert.equal(commit.isError, false); // a warning inside the payload isn't a tool-level error
+  assert.equal(commit.payload.patch_found, false);
+  assert.equal(commit.payload.warnings.length, 1);
+  assert.match(commit.payload.warnings[0], /could not parse JSON Patch block/);
+});
+
 test("errors are surfaced with isError:true and a readable message", async () => {
   const tools = buildToolDefinitions();
   const res = await call(byName(tools, "get_playtest_context"), { scenario_id: "no-such-scenario", round: 1 });
