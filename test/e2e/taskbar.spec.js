@@ -21,8 +21,9 @@ test("collapsed taskbar: main content is full width with no frame/gutter", async
   expect(scrollMainBorder).toBe("0px");
 
   const wrapBg = await page.locator("#content-wrap").evaluate((el) => getComputedStyle(el).backgroundColor);
-  // Not the pending-color gutter background (rgb(240, 169, 60)).
-  expect(wrapBg).not.toBe("rgb(240, 169, 60)");
+  // Collapsed: no distinct gutter shade at all -- content-wrap is unstyled
+  // (transparent), so it just shows through to the page background.
+  expect(wrapBg).toBe("rgba(0, 0, 0, 0)");
 });
 
 test("expanding the taskbar frames the content in a bordered, gutter-wrapped area", async ({ page }) => {
@@ -32,10 +33,18 @@ test("expanding the taskbar frames the content in a bordered, gutter-wrapped are
   const scrollMainBorder = await page
     .locator("#scroll-main")
     .evaluate((el) => getComputedStyle(el).borderWidth);
-  expect(scrollMainBorder).toBe("3px");
+  expect(scrollMainBorder).toBe("2px");
 
+  // The gutter is a neutral shade distinct from the page background (--gutter-bg,
+  // a derived neutral) -- NOT a solid neon accent fill (per the hard "no large
+  // semantic background fill" rule: the wrapped look comes from --scroll-main's
+  // edge glow, not from painting the gutter itself in an accent color).
   const wrapBg = await page.locator("#content-wrap").evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(wrapBg).toBe("rgb(240, 169, 60)");
+  const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(wrapBg).not.toBe(bodyBg);
+  for (const neon of ["rgb(61, 220, 255)", "rgb(57, 255, 136)", "rgb(255, 67, 101)", "rgb(255, 210, 61)"]) {
+    expect(wrapBg).not.toBe(neon);
+  }
 
   const contentBox = await page.locator("#content-wrap").boundingBox();
   expect(contentBox.x).toBeGreaterThan(200); // pushed right by the taskbar width

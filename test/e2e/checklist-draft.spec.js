@@ -17,19 +17,23 @@ test("checklist renders three distinctly-spaced groups instead of one flat list"
     .locator("#checklist-groups .checklist-group")
     .first()
     .evaluate((el) => getComputedStyle(el).borderWidth);
-  expect(firstGroupBorder).toBe("3px");
+  expect(firstGroupBorder).toBe("2px");
 });
 
-test("a completed checklist item gets a verified fill, not just a checkmark icon", async ({ page }) => {
+test("a completed checklist item gets a verified accent edge, not just a checkmark icon", async ({ page }) => {
   const row = page.locator("#checklist-groups .checklist-row").first();
-  const bgBefore = await row.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const borderBefore = await row.evaluate((el) => getComputedStyle(el).borderLeftWidth);
 
   await callTool(page, "update_card_field", { section: "cast", value: { status: "known", note: "" } });
 
   await expect(row).toHaveClass(/is-done/);
-  const bgAfter = await row.evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(bgAfter).not.toBe(bgBefore);
-  expect(bgAfter).toBe("rgba(47, 158, 107, 0.14)"); // --color-verified-tint
+  const style = await row.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return { width: cs.borderLeftWidth, color: cs.borderLeftColor };
+  });
+  expect(style.width).not.toBe(borderBefore);
+  expect(style.width).toBe("3px");
+  expect(style.color).toBe("rgb(57, 255, 136)"); // --color-verified
 });
 
 test("draft preview warning cards only appear next to fields that actually have a problem", async ({ page }) => {

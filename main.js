@@ -424,7 +424,14 @@ function renderCompareCards() {
     if (meta && meta.triggered_world_entries.length > 0) {
       const tags = el("div", { class: "compare-tags" });
       for (const comment of meta.triggered_world_entries) {
-        const cls = inSome.has(comment) ? "status-tag tag-warning" : inAll.has(comment) ? "status-tag tag-verified" : "status-tag tag-neutral";
+        // Only a tag for an entry compare_scenarios actually flagged as
+        // inconsistent (triggered in some but not all compared scenarios)
+        // gets the pulsing glow -- nothing else in the app animates.
+        const cls = inSome.has(comment)
+          ? "status-tag tag-warning pulse-warning"
+          : inAll.has(comment)
+            ? "status-tag tag-verified"
+            : "status-tag tag-neutral";
         tags.appendChild(el("span", { class: cls, text: comment }));
       }
       card.appendChild(tags);
