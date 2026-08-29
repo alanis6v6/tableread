@@ -33,19 +33,28 @@ test("draft edits, checklist updates, and activity log render live", async ({ pa
   await callTool(page, "update_card_field", { section: "name", value: "測試角色" });
   await callTool(page, "update_card_field", { section: "cast", value: { status: "known", note: "主角＋馬提亞斯" } });
 
-  await expect(page.locator("#draft-fields dd").first()).toHaveText("測試角色");
+  // "name" is the first key-value item in the draft preview's left quadrant.
+  await expect(page.locator("#draft-quadrant-cast .kv-value").first()).toHaveText("測試角色");
+  await expect(page.locator("#draft-banner-name")).toHaveText("測試角色");
 
-  const firstRow = page.locator("#checklist-list .checklist-row").first();
+  // "cast" is the first aspect of the first checklist group ("角色核心").
+  const firstRow = page.locator("#checklist-groups .checklist-row").first();
   await expect(firstRow.locator(".checklist-icon")).toHaveText("✅");
   await expect(firstRow.locator(".checklist-note")).toHaveText("主角＋馬提亞斯");
+  await expect(firstRow).toHaveClass(/is-done/);
+  await expect(page.locator("#checklist-fraction")).toHaveText("1/8");
 
   await expect(page.locator("#activity-log .log-entry")).toHaveCount(2);
 });
 
-test("running a scenario renders its transcript and QA summary in autotest", async ({ page }) => {
+test("running a scenario renders its chat transcript, and QA chips only render when they apply", async ({ page }) => {
   await callTool(page, "update_card_field", { section: "first_mes", value: "你推開老宅的門。" });
   await callTool(page, "run_scenario", { scenario_id: "first_mes", rounds: 1 });
   await callTool(page, "get_playtest_context", { scenario_id: "first_mes", round: 1 });
+  // No JSON Patch block in char_text -> patch_found: false for round 1, so
+  // only the "節奏" (rhythm) chip should render; no world-book entries exist
+  // yet and no regex/patch warning was raised, so those two chips must not
+  // take up any space.
   await callTool(page, "commit_playtest_round", {
     scenario_id: "first_mes",
     round: 1,
@@ -54,21 +63,29 @@ test("running a scenario renders its transcript and QA summary in autotest", asy
   });
 
   await page.selectOption("#scenario-select", "first_mes");
-  await expect(page.locator("#transcript .round-block")).toHaveCount(2); // round 0 (opening) + round 1
-  await expect(page.locator("#qa-summary .qa-row").first()).toContainText("已跑輪數");
+  await expect(page.locator("#transcript .chat-round-label")).toHaveCount(2); // round 0 (opening) + round 1
+  await expect(page.locator("#transcript .chat-bubble.char")).toHaveCount(2);
+
+  const chips = page.locator("#autotest-chips .qa-chip");
+  await expect(chips).toHaveCount(1);
+  await expect(chips.first()).toHaveText("節奏 ◐");
+  await expect(page.locator("#autotest-chips")).not.toContainText("世界書");
+  await expect(page.locator("#autotest-chips")).not.toContainText("regex");
 });
 
-test("comparing two scenarios shows an inconsistency alert and a warning-tagged card", async ({ page }) => {
+test("comparing two scenarios surfaces the inconsistency in the left anchor immediately, and tags a warning card", async ({ page }) => {
   const compareResult = await setupComparableScenarios(page);
   expect(compareResult.world_entries_triggered_in_some).toContain("老宅設定");
 
   await page.locator("#section-compare").scrollIntoViewIfNeeded();
+
   const checkboxes = page.locator("#scenario-list .scenario-row input[type=checkbox]");
   await checkboxes.nth(0).check();
   await checkboxes.nth(1).check();
 
+  await expect(page.locator("#compare-anchor")).toHaveClass(/anchor-warning/);
+  await expect(page.locator("#compare-anchor-body")).toContainText("老宅設定");
+
   await expect(page.locator("#compare-cards .compare-card")).toHaveCount(2);
   await expect(page.locator("#compare-cards .compare-card.has-warning")).toHaveCount(1);
-  await expect(page.locator("#compare-summary .compare-alert")).not.toHaveClass(/compare-alert-ok/);
-  await expect(page.locator("#compare-summary .compare-alert")).toContainText("老宅設定");
 });

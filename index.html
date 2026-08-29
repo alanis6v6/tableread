@@ -31,65 +31,78 @@
   <main id="scroll-main" class="scroll-main">
 
     <section class="snap-section" id="section-checklist" data-section-index="0">
-      <div class="section-inner">
-        <h2 class="two-line-title"><span class="title-zh">檢核表對話</span><span class="title-en">Checklist</span></h2>
-        <ol id="checklist-list" class="checklist-list"></ol>
-
-        <h3 class="two-line-title subsection"><span class="title-zh">Agent 呼叫紀錄</span><span class="title-en">Activity Log</span></h3>
-        <p class="hint">
-          這裡不是聊天室——網站本身不呼叫任何 LLM。這是呼叫此頁面 WebMCP 工具的 Agent（或你在
-          DevTools 的 WebMCP 面板手動呼叫）留下的活動紀錄，用來確認工具真的有被呼叫、參數與回傳是否正確。
-        </p>
-        <div id="activity-log" class="scroll-list"></div>
+      <div class="section-inner checklist-layout">
+        <div class="checklist-anchor">
+          <h2 class="two-line-title"><span class="title-zh">檢核表對話</span><span class="title-en">Checklist</span></h2>
+          <div class="anchor-fraction" id="checklist-fraction">0/8</div>
+          <p class="anchor-desc" id="checklist-anchor-desc"></p>
+        </div>
+        <div class="checklist-groups" id="checklist-groups"></div>
       </div>
     </section>
 
     <section class="snap-section" id="section-draft" data-section-index="1">
       <div class="section-inner">
         <h2 class="two-line-title"><span class="title-zh">草稿預覽</span><span class="title-en">Draft</span></h2>
-        <div id="draft-fields" class="draft-fields panel-card"></div>
+
+        <div class="draft-banner">
+          <div class="draft-banner-name" id="draft-banner-name"></div>
+          <div class="draft-banner-desc" id="draft-banner-desc"></div>
+        </div>
+
+        <div class="draft-quadrants">
+          <div class="draft-quadrant panel-card">
+            <div class="quadrant-label">人物設定／世界觀</div>
+            <div id="draft-quadrant-cast" class="kv-block"></div>
+          </div>
+          <div class="draft-quadrant panel-card">
+            <div class="quadrant-label">情感偏好／技術欄位</div>
+            <div id="draft-quadrant-tech" class="kv-block"></div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="snap-section" id="section-autotest" data-section-index="2">
+    <section class="snap-section snap-section-autotest" id="section-autotest" data-section-index="2">
       <div class="section-inner">
         <div class="autotest-header">
-          <h2 class="two-line-title"><span class="title-zh">自動測卡</span><span class="title-en">Autotest</span></h2>
+          <h2 class="two-line-title two-line-title-inverse"><span class="title-zh">自動測卡</span><span class="title-en">Autotest</span></h2>
           <label class="scenario-select-label">
             情境：
             <select id="scenario-select"></select>
           </label>
         </div>
-        <div class="autotest-body">
-          <div class="autotest-col panel-card">
-            <h3>對話回放</h3>
-            <div id="transcript" class="scroll-list"></div>
-          </div>
-          <div class="autotest-col panel-card">
-            <h3>QA 摘要</h3>
-            <div id="qa-summary" class="scroll-list"></div>
-          </div>
+
+        <div class="autotest-player">
+          <div id="transcript" class="transcript-scroll"></div>
         </div>
+
+        <div class="autotest-chips" id="autotest-chips"></div>
       </div>
     </section>
 
     <section class="snap-section" id="section-compare" data-section-index="3">
-      <div class="section-inner">
-        <h2 class="two-line-title"><span class="title-zh">情境比較</span><span class="title-en">Compare</span></h2>
-
-        <div class="compare-toprow panel-card">
-          <h3>情境清單管理</h3>
-          <p class="hint">勾選要拿去比較的情境，狀態欄顯示這個情境目前是否已經 run_scenario 過。</p>
-          <div id="scenario-list" class="scroll-list"></div>
+      <div class="section-inner compare-layout">
+        <div class="compare-anchor anchor-empty" id="compare-anchor">
+          <h2 class="two-line-title two-line-title-inverse"><span class="title-zh">情境比較</span><span class="title-en">Compare</span></h2>
+          <div class="compare-anchor-body" id="compare-anchor-body"></div>
         </div>
 
-        <div class="compare-cards-scroller">
-          <div id="compare-cards" class="compare-cards"></div>
-        </div>
+        <div class="compare-right">
+          <div class="compare-toprow panel-card">
+            <h3>情境清單管理</h3>
+            <p class="hint">勾選要拿去比較的情境，狀態欄顯示這個情境目前是否已經 run_scenario 過。</p>
+            <div id="scenario-list" class="scroll-list"></div>
+          </div>
 
-        <div class="compare-summary-panel panel-card">
-          <h3>跨情境比較摘要</h3>
-          <div id="compare-summary"></div>
+          <div class="compare-cards-scroller">
+            <div id="compare-cards" class="compare-cards"></div>
+          </div>
+
+          <div class="compare-summary-panel panel-card">
+            <h3>跨情境變量比較</h3>
+            <div id="compare-summary"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -101,6 +114,20 @@
     <span class="dot" data-dot="1"></span>
     <span class="dot" data-dot="2"></span>
     <span class="dot" data-dot="3"></span>
+  </div>
+</div>
+
+<div id="console-drawer" class="console-drawer collapsed">
+  <button type="button" id="console-toggle" class="console-tab">
+    呼叫紀錄 <span class="console-tab-arrow" id="console-tab-arrow">▲</span>
+  </button>
+  <div class="console-body">
+    <h3 class="two-line-title subsection"><span class="title-zh">Agent 呼叫紀錄</span><span class="title-en">Activity Log</span></h3>
+    <p class="hint">
+      這裡不是聊天室——網站本身不呼叫任何 LLM。這是呼叫此頁面 WebMCP 工具的 Agent（或你在
+      DevTools 的 WebMCP 面板手動呼叫）留下的活動紀錄，用來確認工具真的有被呼叫、參數與回傳是否正確。
+    </p>
+    <div id="activity-log" class="scroll-list console-log"></div>
   </div>
 </div>
 

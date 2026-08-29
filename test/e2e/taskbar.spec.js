@@ -49,7 +49,7 @@ test("taskbar is non-modal: clicking inside main content never collapses it", as
   await expect(page.locator("#taskbar")).toHaveClass(/expanded/);
 
   await page.locator("#section-draft").scrollIntoViewIfNeeded();
-  await page.locator("#draft-fields").click({ position: { x: 5, y: 5 } });
+  await page.locator(".draft-banner").click();
   await expect(page.locator("#taskbar")).toHaveClass(/expanded/);
 
   await page.locator("#section-compare").scrollIntoViewIfNeeded();

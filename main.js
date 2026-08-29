@@ -7,7 +7,7 @@ import {
   compareScenariosLogic,
 } from "./src/tools/registerTools.js";
 import { CHECKLIST_ASPECTS, CHECKLIST_STATUS_ICON } from "./src/tools/checklist.js";
-import { SCALAR_FIELD_KEYS, ARRAY_FIELD_KEYS } from "./src/tools/draftStore.js";
+import { ARRAY_FIELD_KEYS } from "./src/tools/draftStore.js";
 
 const FIELD_LABELS = {
   name: "name",
@@ -24,6 +24,21 @@ const FIELD_LABELS = {
   character_book_entries: "character_book_entries（世界書條目數）",
   regex_scripts: "regex_scripts（美化腳本數）",
 };
+
+// Splits the flat card-field list into the draft preview's two loose
+// key-value quadrants (a UI grouping only -- draftStore itself has no
+// notion of "quadrants").
+const DRAFT_LEFT_KEYS = ["name", "world_name", "description", "personality", "character_book_entries"];
+const DRAFT_RIGHT_KEYS = ["scenario", "first_mes", "mes_example", "alternate_greetings", "system_prompt", "creator_notes", "tags", "regex_scripts"];
+
+// Groups the 8 checklist aspects for the checklist-dialogue section. Order
+// matches CHECKLIST_ASPECTS exactly (see src/tools/checklist.js) -- this is
+// purely a presentation grouping, not a change to that data.
+const CHECKLIST_GROUPS = [
+  { label: "角色核心", desc: "先把會反覆用到的人物、世界觀與關鍵事件釘住。", keys: ["cast", "world_rules", "special_events"] },
+  { label: "情感與故事", desc: "確認情感／親密偏好、背景故事與 NPC 關係網。", keys: ["intimacy_preferences", "backstory", "npc_network"] },
+  { label: "技術設定", desc: "確認角色心理狀態進展脈絡，並決定要不要上 MVU 動態變量卡。", keys: ["psych_arc", "mvu"] },
+];
 
 function escapeHtml(s) {
   return String(s ?? "")
@@ -101,38 +116,84 @@ async function boot() {
 // ---- Panel: 草稿即時預覽 --------------------------------------------------
 
 function renderChecklist() {
-  const list = document.getElementById("checklist-list");
   const checklist = draftStore.getChecklistStatus();
-  list.innerHTML = "";
-  CHECKLIST_ASPECTS.forEach((aspect, i) => {
-    const entry = checklist[aspect.key] ?? { status: "pending_ideation", note: "" };
-    const row = el("li", { class: "checklist-row" }, [
-      el("span", { class: "checklist-index", text: String(i + 1).padStart(2, "0") }),
-      el("span", { class: "checklist-icon", text: CHECKLIST_STATUS_ICON[entry.status] ?? "⬜" }),
-      el("span", { class: "checklist-label", text: aspect.label }),
-      el("span", { class: "checklist-note", text: entry.note || "" }),
-    ]);
-    list.appendChild(row);
-  });
+  const aspectByKey = Object.fromEntries(CHECKLIST_ASPECTS.map((a, i) => [a.key, { ...a, index: i }]));
+  const statusOf = (key) => checklist[key]?.status ?? "pending_ideation";
+
+  const doneCount = CHECKLIST_ASPECTS.filter((a) => statusOf(a.key) === "known").length;
+  document.getElementById("checklist-fraction").textContent = `${doneCount}/${CHECKLIST_ASPECTS.length}`;
+
+  const activeGroup = CHECKLIST_GROUPS.find((g) => g.keys.some((k) => statusOf(k) !== "known"));
+  document.getElementById("checklist-anchor-desc").textContent = activeGroup
+    ? activeGroup.desc
+    : "八個面向都已確認，可以進入草稿撰寫。";
+
+  const groupsContainer = document.getElementById("checklist-groups");
+  groupsContainer.innerHTML = "";
+  for (const group of CHECKLIST_GROUPS) {
+    const list = el("ol", { class: "group-list" });
+    for (const key of group.keys) {
+      const aspect = aspectByKey[key];
+      const entry = checklist[key] ?? { status: "pending_ideation", note: "" };
+      const isDone = entry.status === "known";
+      const row = el("li", { class: isDone ? "checklist-row is-done" : "checklist-row" }, [
+        el("span", { class: "checklist-index", text: String(aspect.index + 1).padStart(2, "0") }),
+        el("span", { class: "checklist-icon", text: CHECKLIST_STATUS_ICON[entry.status] ?? "⬜" }),
+        el("span", { class: "checklist-label", text: aspect.label }),
+        el("span", { class: "checklist-note", text: entry.note || "" }),
+      ]);
+      list.appendChild(row);
+    }
+    groupsContainer.appendChild(
+      el("div", { class: "checklist-group panel-card" }, [el("div", { class: "group-label", text: group.label }), list]),
+    );
+  }
+}
+
+/** Purely presentational data-quality checks -- derived only from fields
+ * already in draftStore, no new validation logic added to the store. */
+function fieldWarning(key, fields) {
+  if (key === "character_book_entries") {
+    const missing = (fields.character_book_entries || []).filter((e) => !e.content);
+    if (missing.length > 0) return `有 ${missing.length} 筆條目沒有 content，不會產生任何效果`;
+  }
+  if (key === "regex_scripts") {
+    const missing = (fields.regex_scripts || []).filter((s) => !s.findRegex);
+    if (missing.length > 0) return `有 ${missing.length} 個腳本缺少 findRegex，套用時會被忽略`;
+  }
+  return null;
+}
+
+function renderKvBlock(containerId, keys, fields) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  for (const key of keys) {
+    const item = el("div", { class: "kv-item" }, [el("div", { class: "kv-label", text: FIELD_LABELS[key] ?? key })]);
+    if (ARRAY_FIELD_KEYS.includes(key)) {
+      const arr = fields[key] ?? [];
+      item.appendChild(
+        arr.length ? el("div", { class: "kv-value", text: `${arr.length} 項` }) : el("div", { class: "kv-value empty", text: "（空）" }),
+      );
+    } else {
+      const val = fields[key] ?? "";
+      item.appendChild(val ? el("div", { class: "kv-value", text: val }) : el("div", { class: "kv-value empty", text: "（尚未填寫）" }));
+    }
+    const warning = fieldWarning(key, fields);
+    // Only fields that actually have something wrong grow a warning card --
+    // everything else takes up no extra space.
+    if (warning) item.appendChild(el("div", { class: "kv-warning-card", text: `⚠ ${warning}` }));
+    container.appendChild(item);
+  }
 }
 
 function renderDraftFields() {
-  const container = document.getElementById("draft-fields");
   const { fields } = draftStore.getSnapshot();
-  container.innerHTML = "";
-  const dl = el("dl");
-  for (const key of [...SCALAR_FIELD_KEYS, ...ARRAY_FIELD_KEYS]) {
-    const label = FIELD_LABELS[key] ?? key;
-    dl.appendChild(el("dt", { text: label }));
-    if (ARRAY_FIELD_KEYS.includes(key)) {
-      const arr = fields[key] ?? [];
-      dl.appendChild(el("dd", arr.length ? { text: `${arr.length} 項` } : { class: "empty", text: "（空）" }));
-    } else {
-      const val = fields[key] ?? "";
-      dl.appendChild(val ? el("dd", { text: val }) : el("dd", { class: "empty", text: "（尚未填寫）" }));
-    }
-  }
-  container.appendChild(dl);
+
+  document.getElementById("draft-banner-name").textContent = fields.name || "尚未命名的角色";
+  document.getElementById("draft-banner-desc").textContent = fields.description || fields.personality || "尚未填寫 description。";
+
+  renderKvBlock("draft-quadrant-cast", DRAFT_LEFT_KEYS, fields);
+  renderKvBlock("draft-quadrant-tech", DRAFT_RIGHT_KEYS, fields);
 }
 
 // ---- Panel: Agent 呼叫紀錄 ------------------------------------------------
@@ -188,37 +249,36 @@ function renderAutotest() {
   const select = document.getElementById("scenario-select");
   const scenarioId = select.value;
   const transcriptEl = document.getElementById("transcript");
-  const qaEl = document.getElementById("qa-summary");
+  const chipsEl = document.getElementById("autotest-chips");
 
   if (!scenarioId) {
     transcriptEl.innerHTML = '<div class="hint">選一個已經 run_scenario 過的情境來查看回放。</div>';
-    qaEl.innerHTML = "";
+    chipsEl.innerHTML = "";
     return;
   }
 
   const result = sessionRegistry.getTranscript(scenarioId);
   if (!result.ok) {
     transcriptEl.innerHTML = `<div class="hint">${escapeHtml(result.error)}</div>`;
-    qaEl.innerHTML = "";
+    chipsEl.innerHTML = "";
     return;
   }
 
   transcriptEl.innerHTML = "";
   for (const round of result.rounds) {
-    const block = el("div", { class: "round-block" });
-    block.appendChild(el("div", { class: "round-label", text: `第 ${round.round} 頁` }));
+    transcriptEl.appendChild(el("div", { class: "chat-round-label", text: `第 ${round.round} 頁` }));
     if (round.player_raw !== null) {
-      block.appendChild(el("div", { class: "bubble-player", text: round.player_raw }));
+      transcriptEl.appendChild(el("div", { class: "chat-row player" }, [el("div", { class: "chat-bubble player", text: round.player_raw })]));
     }
-    block.appendChild(el("div", { class: "bubble-char", html: round.char_html }));
-    transcriptEl.appendChild(block);
+    transcriptEl.appendChild(el("div", { class: "chat-row char" }, [el("div", { class: "chat-bubble char", html: round.char_html })]));
   }
 
-  // QA summary: derived entirely from data already returned by the tools
+  // QA chips: derived entirely from data already returned by the tools
   // (transcript + the assembled card's world-book entries), no extra state.
-  qaEl.innerHTML = "";
-  const totalRounds = result.rounds.filter((r) => r.round > 0).length;
-  const allWarnings = result.rounds.flatMap((r) => r.warnings.map((w) => ({ round: r.round, warning: w })));
+  // Each chip only renders when its condition actually holds -- no
+  // always-on placeholder chips.
+  chipsEl.innerHTML = "";
+  const allWarnings = result.rounds.flatMap((r) => r.warnings);
   const patchMisses = result.rounds.filter((r) => r.round > 0 && !r.patch_found).length;
 
   const triggeredComments = new Set();
@@ -230,26 +290,15 @@ function renderAutotest() {
   const { fields } = draftStore.getSnapshot();
   const allComments = (fields.character_book_entries || []).map((e) => e.comment || `(id ${e.id})`);
   const neverTriggered = allComments.filter((c) => !triggeredComments.has(c));
-  const neverTriggeredText = allComments.length === 0 ? "（尚無世界書條目）" : neverTriggered.length ? neverTriggered.join("、") : "無";
 
-  qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: "已跑輪數" }), el("span", { text: String(totalRounds) })]));
-  qaEl.appendChild(
-    el("div", { class: "qa-row" }, [el("span", { text: "JSON Patch 缺失次數" }), el("span", { text: String(patchMisses) })]),
-  );
-  qaEl.appendChild(
-    el("div", { class: "qa-row" }, [
-      el("span", { text: "從未觸發的世界書條目" }),
-      el("span", { text: neverTriggeredText }),
-    ]),
-  );
-  if (allWarnings.length === 0) {
-    qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: "regex/patch 警告" }), el("span", { text: "無" })]));
-  } else {
-    for (const w of allWarnings) {
-      qaEl.appendChild(
-        el("div", { class: "qa-row qa-warning" }, [el("span", { text: `第 ${w.round} 頁` }), el("span", { text: w.warning })]),
-      );
-    }
+  if (allComments.length > 0 && neverTriggered.length === 0) {
+    chipsEl.appendChild(el("span", { class: "status-tag tag-verified qa-chip", text: "世界書 ✓" }));
+  }
+  if (allWarnings.length > 0) {
+    chipsEl.appendChild(el("span", { class: "status-tag tag-warning qa-chip", text: "regex ⚠" }));
+  }
+  if (patchMisses > 0) {
+    chipsEl.appendChild(el("span", { class: "status-tag tag-structure qa-chip", text: "節奏 ◐" }));
   }
 }
 
@@ -281,6 +330,7 @@ function renderScenarioList() {
       if (checkbox.checked) compareSelected.add(id);
       else compareSelected.delete(id);
       renderCompareCards();
+      renderCompareAnchor();
       renderCompareSummary();
     });
 
@@ -389,65 +439,79 @@ function renderCompareCards() {
   }
 }
 
+// The left anchor card: the compare section's conclusion, visible the
+// instant you scroll in, before touching the horizontal card strip at all.
+function renderCompareAnchor() {
+  const anchor = document.getElementById("compare-anchor");
+  const body = document.getElementById("compare-anchor-body");
+  const ids = [...compareSelected];
+  body.innerHTML = "";
+
+  if (ids.length === 0) {
+    anchor.className = "compare-anchor anchor-empty";
+    body.appendChild(el("div", { class: "hint", text: "在右側「情境清單管理」勾選至少一個情境，這裡會立刻顯示跨情境的不一致摘要。" }));
+    return;
+  }
+
+  // Calls the compareScenarios logic directly, same as renderCompareCards()/
+  // renderCompareSummary() do -- pure and cheap, no extra state to keep in sync.
+  const result = compareScenariosLogic.compareScenarios(ids);
+
+  if (result.world_entries_triggered_in_some.length > 0) {
+    anchor.className = "compare-anchor anchor-warning";
+    body.appendChild(
+      el("div", {}, [
+        el("strong", { text: "⚠ 觸發不一致" }),
+        el("span", { text: `部分情境觸發、部分沒有（QA 重點）：${result.world_entries_triggered_in_some.join("、")}` }),
+      ]),
+    );
+  } else {
+    anchor.className = "compare-anchor anchor-ok";
+    body.appendChild(
+      el("div", {}, [el("strong", { text: "✓ 觸發一致" }), el("span", { text: "沒有偵測到跨情境觸發不一致的世界書條目。" })]),
+    );
+  }
+
+  const errorScenarios = result.scenarios.filter((s) => s.error);
+  if (errorScenarios.length > 0) {
+    body.appendChild(
+      el("div", { class: "hint", text: `尚未執行、無法比較：${errorScenarios.map((s) => s.scenario_id).join("、")}` }),
+    );
+  }
+}
+
 function renderCompareSummary() {
   const container = document.getElementById("compare-summary");
   container.innerHTML = "";
   const ids = [...compareSelected];
   if (ids.length === 0) {
-    container.appendChild(el("div", { class: "hint", text: "勾選情境後才能算跨情境比較摘要。" }));
+    container.appendChild(el("div", { class: "hint", text: "勾選情境後才能列出跨情境變量比較表。" }));
     return;
   }
 
-  // Calls the compareScenarios logic directly, same as renderAutotest() calls
-  // sessionRegistry directly -- no need to go through the WebMCP execute() wrapper.
   const result = compareScenariosLogic.compareScenarios(ids);
-
-  if (result.world_entries_triggered_in_some.length > 0) {
-    container.appendChild(
-      el("div", {
-        class: "compare-alert",
-        text: `⚠ 觸發不一致的世界書條目（部分情境觸發、部分沒有，QA 重點）：${result.world_entries_triggered_in_some.join("、")}`,
-      }),
-    );
-  } else {
-    container.appendChild(
-      el("div", { class: "compare-alert compare-alert-ok", text: "沒有偵測到跨情境觸發不一致的世界書條目。" }),
-    );
-  }
-
   const okScenarios = result.scenarios.filter((s) => !s.error);
-  const errorScenarios = result.scenarios.filter((s) => s.error);
-  if (errorScenarios.length > 0) {
-    container.appendChild(
-      el("div", { class: "hint", text: `尚未執行、無法比較：${errorScenarios.map((s) => s.scenario_id).join("、")}` }),
-    );
+  if (okScenarios.length === 0) {
+    container.appendChild(el("div", { class: "hint", text: "勾選的情境都還沒 run_scenario 過，沒有變量可比較。" }));
+    return;
   }
 
-  if (okScenarios.length > 0) {
-    const varKeys = [...new Set(okScenarios.flatMap((s) => Object.keys(s.final_vars || {})))];
-    const table = el("table", { class: "compare-table" });
-    table.appendChild(
-      el("thead", {}, [
-        el("tr", {}, [el("th", { text: "變量" }), ...okScenarios.map((s) => el("th", { text: s.label }))]),
-      ]),
-    );
-    const tbody = el("tbody");
-    if (varKeys.length === 0) {
-      tbody.appendChild(
-        el("tr", {}, [el("td", { text: "（尚無變量）", colspan: String(okScenarios.length + 1) })]),
-      );
-    }
-    for (const key of varKeys) {
-      tbody.appendChild(
-        el("tr", {}, [
-          el("td", { text: key }),
-          ...okScenarios.map((s) => el("td", { text: JSON.stringify(s.final_vars?.[key] ?? null) })),
-        ]),
-      );
-    }
-    table.appendChild(tbody);
-    container.appendChild(table);
+  const varKeys = [...new Set(okScenarios.flatMap((s) => Object.keys(s.final_vars || {})))];
+  const table = el("table", { class: "compare-table" });
+  table.appendChild(
+    el("thead", {}, [el("tr", {}, [el("th", { text: "變量" }), ...okScenarios.map((s) => el("th", { text: s.label }))])]),
+  );
+  const tbody = el("tbody");
+  if (varKeys.length === 0) {
+    tbody.appendChild(el("tr", {}, [el("td", { text: "（尚無變量）", colspan: String(okScenarios.length + 1) })]));
   }
+  for (const key of varKeys) {
+    tbody.appendChild(
+      el("tr", {}, [el("td", { text: key }), ...okScenarios.map((s) => el("td", { text: JSON.stringify(s.final_vars?.[key] ?? null) }))]),
+    );
+  }
+  table.appendChild(tbody);
+  container.appendChild(table);
 }
 
 // ---- Wiring --------------------------------------------------------------
@@ -461,6 +525,7 @@ function renderAll() {
   renderScenarioList();
   renderTaskbarScenarios();
   renderCompareCards();
+  renderCompareAnchor();
   renderCompareSummary();
 }
 
@@ -482,6 +547,23 @@ function setTaskbarExpanded(expanded) {
 }
 taskbarToggle.addEventListener("click", () => {
   setTaskbarExpanded(!taskbar.classList.contains("expanded"));
+});
+
+// ---- Bottom console drawer (Agent 呼叫紀錄) ------------------------------
+// A separate drawer with its own toggle/state, independent of the taskbar --
+// opening one never touches the other.
+
+const consoleDrawer = document.getElementById("console-drawer");
+const consoleToggle = document.getElementById("console-toggle");
+const consoleTabArrow = document.getElementById("console-tab-arrow");
+
+function setConsoleExpanded(expanded) {
+  consoleDrawer.classList.toggle("expanded", expanded);
+  consoleDrawer.classList.toggle("collapsed", !expanded);
+  consoleTabArrow.textContent = expanded ? "▼" : "▲";
+}
+consoleToggle.addEventListener("click", () => {
+  setConsoleExpanded(!consoleDrawer.classList.contains("expanded"));
 });
 
 // ---- Mode switch (創作者｜遊戲商) -----------------------------------------

@@ -27,6 +27,7 @@
 
   --taskbar-w: 232px;
   --gutter: 22px;
+  --console-h: 40vh;
 }
 
 * { box-sizing: border-box; }
@@ -48,12 +49,6 @@ body {
 /* ---------------------------------------------------------------------
    Shared "hard shadow" building blocks
 --------------------------------------------------------------------- */
-.hard-border {
-  border: var(--border-w) solid var(--color-ink);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-w) var(--shadow-w) 0 var(--color-ink);
-}
-
 .panel-card {
   background: var(--color-surface);
   border: var(--border-w) solid var(--color-ink);
@@ -74,6 +69,10 @@ body {
 }
 .two-line-title.subsection .title-zh { font-size: 13px; font-weight: 600; }
 .two-line-title.subsection .title-en { font-size: 10px; }
+/* On a colored full-bleed background (autotest/compare anchor), the subtitle
+   needs to stay legible against a saturated fill instead of the page bg. */
+.two-line-title-inverse .title-zh { color: var(--color-ink); }
+.two-line-title-inverse .title-en { color: rgba(32, 26, 20, 0.55); }
 
 .hint { font-size: 11px; color: var(--color-ink-soft); line-height: 1.5; margin: 0 0 10px; }
 
@@ -108,6 +107,7 @@ body {
 }
 .status-tag.tag-verified { background: var(--color-verified-tint); border-color: var(--color-verified); color: #1c6b4a; }
 .status-tag.tag-warning { background: var(--color-warning-tint); border-color: var(--color-warning); color: #a53827; }
+.status-tag.tag-structure { background: var(--color-structure-tint); border-color: var(--color-structure); color: #2c3a9e; }
 .status-tag.tag-neutral { background: var(--color-bg); border-color: var(--color-ink-faint); color: var(--color-ink-soft); }
 
 /* ---------------------------------------------------------------------
@@ -132,6 +132,8 @@ body {
 /* ---------------------------------------------------------------------
    Left taskbar: collapsed = just a floating icon button, no frame at all.
    Expanded = a persistent structure-colored rail with mode pill + scenario nav.
+   Independent of the bottom console drawer -- separate element, separate
+   state, no shared toggle.
 --------------------------------------------------------------------- */
 .taskbar {
   position: fixed;
@@ -226,6 +228,57 @@ body {
 .scenario-nav-empty { font-size: 11px; color: rgba(255, 253, 248, 0.75); }
 
 /* ---------------------------------------------------------------------
+   Bottom console drawer (Agent 呼叫紀錄). Fixed to the viewport bottom,
+   independent of the taskbar's own collapse/expand state -- its own toggle,
+   its own class, no shared variable.
+--------------------------------------------------------------------- */
+.console-drawer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.console-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 18px;
+  border: var(--border-w) solid var(--color-ink);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  cursor: pointer;
+}
+
+.console-drawer .console-body { display: none; }
+
+.console-drawer.expanded {
+  width: 100%;
+}
+.console-drawer.expanded .console-body {
+  display: block;
+  width: 100%;
+  height: var(--console-h);
+  background: var(--color-surface);
+  border-top: var(--border-w) solid var(--color-ink);
+  box-shadow: 0 -4px 0 var(--color-ink);
+  padding: 16px clamp(16px, 5vw, 48px);
+  overflow-y: auto;
+}
+.console-drawer.expanded .console-tab { border-radius: 0 0 var(--radius-sm) var(--radius-sm); border-top: none; border-bottom: var(--border-w) solid var(--color-ink); }
+.console-drawer.expanded { flex-direction: column-reverse; }
+
+.console-log { max-height: none; border: none; box-shadow: none; padding: 0; background: transparent; }
+
+/* ---------------------------------------------------------------------
    Content wrap: full-width when taskbar collapsed; framed + gutter when
    taskbar is expanded ("wrapped" look with a visible mustard gutter).
 --------------------------------------------------------------------- */
@@ -263,9 +316,12 @@ body.taskbar-expanded .scroll-main {
   scroll-snap-stop: always;
   overflow-y: auto;
   padding: clamp(20px, 4vw, 48px);
+  /* Clears the collapsed taskbar's fixed top-left icon button (top:16px,
+     ~34px tall) so section titles/anchor cards never sit under it. */
+  padding-top: 76px;
 }
 
-.section-inner { max-width: 1100px; }
+.section-inner { max-width: 1160px; }
 
 /* ---------------------------------------------------------------------
    Scroll position dots (purely visual, non-interactive)
@@ -290,19 +346,47 @@ body.taskbar-expanded .scroll-main {
 .scroll-dots .dot.active { background: var(--color-structure); }
 
 /* ---------------------------------------------------------------------
-   Checklist dialog (section 1)
+   ① Checklist dialogue -- a narrow progress anchor on the left, three
+   grouped cards (not eight identical rows) on the right.
 --------------------------------------------------------------------- */
-.checklist-list { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.checklist-layout { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: start; }
+
+.checklist-anchor {
+  background: var(--color-structure);
+  color: var(--color-surface);
+  border: var(--border-w) solid var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-w) var(--shadow-w) 0 var(--color-ink);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+}
+.checklist-anchor .anchor-fraction { font-size: 42px; font-weight: 800; line-height: 1; }
+.checklist-anchor .anchor-desc { font-size: 12px; line-height: 1.6; color: rgba(255, 253, 248, 0.88); }
+
+.checklist-groups { display: flex; flex-direction: column; gap: 22px; }
+.checklist-group { padding: 0; overflow: hidden; }
+.checklist-group .group-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  padding: 12px 16px 8px;
+}
+.group-list { list-style: none; margin: 0; padding: 0; }
 .checklist-row {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  background: var(--color-surface);
-  border: 2px solid var(--color-ink);
-  border-left: 5px solid var(--color-structure);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--color-ink-faint);
 }
+.group-list .checklist-row:first-child { border-top: none; }
+.checklist-row.is-done { background: var(--color-verified-tint); }
 .checklist-index { font-size: 11px; font-weight: 700; color: var(--color-structure); min-width: 16px; }
 .checklist-icon { font-size: 13px; }
 .checklist-label { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; }
@@ -325,17 +409,54 @@ body.taskbar-expanded .scroll-main {
 .log-entry pre { white-space: pre-wrap; word-break: break-all; margin: 4px 0 0; font-size: 11px; background: var(--color-bg); padding: 6px; border-radius: 6px; }
 
 /* ---------------------------------------------------------------------
-   Draft preview (section 2)
+   ② Draft preview -- a name/description banner anchoring the section,
+   then two loose key-value quadrants (not a table).
 --------------------------------------------------------------------- */
-.draft-fields dt { font-size: 11px; color: var(--color-ink-soft); margin-top: 10px; letter-spacing: 0.02em; }
-.draft-fields dd { margin: 2px 0 0; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
-.draft-fields dd.empty { color: var(--color-ink-faint); font-style: italic; }
+.draft-banner {
+  background: var(--color-structure);
+  color: var(--color-surface);
+  border: var(--border-w) solid var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-w) var(--shadow-w) 0 var(--color-ink);
+  padding: 20px 24px;
+  margin-bottom: 22px;
+}
+.draft-banner-name { font-size: 22px; font-weight: 800; }
+.draft-banner-desc { font-size: 13px; margin-top: 6px; color: rgba(255, 253, 248, 0.88); }
+
+.draft-quadrants { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.draft-quadrant { padding: 18px 20px; }
+.quadrant-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  margin-bottom: 14px;
+}
+.kv-block { display: flex; flex-direction: column; gap: 18px; }
+.kv-label { font-size: 11px; color: var(--color-ink-soft); letter-spacing: 0.02em; margin-bottom: 4px; }
+.kv-value { font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+.kv-value.empty { color: var(--color-ink-faint); font-style: italic; }
+.kv-warning-card {
+  margin-top: 6px;
+  background: var(--color-warning-tint);
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #a53827;
+}
 
 /* ---------------------------------------------------------------------
-   Autotest (section 3)
+   ③ Autotest -- the one full-bleed section (mustard background), a
+   centered chat-style playback window, and QA state chips that only
+   appear when the corresponding condition holds.
 --------------------------------------------------------------------- */
+.snap-section-autotest { background: var(--color-pending); }
+
 .autotest-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-.scenario-select-label { font-size: 12px; color: var(--color-ink-soft); }
+.scenario-select-label { font-size: 12px; color: var(--color-ink); }
 .scenario-select-label select {
   font-size: 12px;
   padding: 4px 8px;
@@ -343,23 +464,56 @@ body.taskbar-expanded .scroll-main {
   border: 2px solid var(--color-ink);
   background: var(--color-surface);
 }
-.autotest-body { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
-.autotest-col h3 { margin-top: 0; }
 
-.round-block { border-bottom: 1px dashed var(--color-ink-faint); padding: 8px 0; }
-.round-block:last-child { border-bottom: none; }
-.round-label { font-size: 10px; color: var(--color-ink-soft); letter-spacing: 0.05em; }
-.bubble-player { background: var(--color-structure-tint); padding: 6px 10px; border-radius: var(--radius-sm); margin: 4px 0; font-size: 12px; }
-.bubble-char { font-size: 12px; }
+.autotest-player {
+  background: var(--color-surface);
+  border: 5px solid var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: 6px 6px 0 var(--color-ink);
+  max-width: 640px;
+  margin: 24px auto;
+  padding: 22px 24px;
+}
 
-.qa-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; }
-.qa-warning { color: var(--color-warning); font-weight: 600; }
+.transcript-scroll { max-height: 48vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.chat-round-label { font-size: 10px; color: var(--color-ink-soft); letter-spacing: 0.05em; margin-top: 8px; }
+.transcript-scroll .chat-round-label:first-child { margin-top: 0; }
+.chat-row { display: flex; }
+.chat-row.player { justify-content: flex-end; }
+.chat-row.char { justify-content: flex-start; }
+.chat-bubble { max-width: 82%; padding: 10px 14px; border-radius: 16px; border: 2px solid var(--color-ink); font-size: 13px; line-height: 1.5; }
+.chat-bubble.player { background: var(--color-structure-tint); border-bottom-right-radius: 4px; }
+.chat-bubble.char { background: var(--color-bg); border-bottom-left-radius: 4px; }
+
+.autotest-chips { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; min-height: 26px; }
+.qa-chip { font-weight: 700; }
 
 /* ---------------------------------------------------------------------
-   Scenario comparison (section 4) -- no nested vertical snap; the card
-   strip scrolls horizontally instead.
+   ④ Scenario comparison -- a warning/verified summary anchor on the left,
+   the (unchanged) horizontal-scroll card strip on the right, enlarged.
 --------------------------------------------------------------------- */
-.compare-toprow { margin-bottom: 16px; }
+.compare-layout { display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: start; }
+
+.compare-anchor {
+  border: var(--border-w) solid var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-w) var(--shadow-w) 0 var(--color-ink);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+}
+.compare-anchor.anchor-warning { background: var(--color-warning); color: var(--color-surface); }
+.compare-anchor.anchor-ok { background: var(--color-verified); color: var(--color-surface); }
+.compare-anchor.anchor-empty { background: var(--color-surface); color: var(--color-ink); }
+.compare-anchor-body { font-size: 12px; line-height: 1.7; }
+.compare-anchor-body strong { display: block; font-size: 13px; margin-bottom: 4px; }
+.compare-anchor-body .hint { color: inherit; opacity: 0.85; margin: 8px 0 0; }
+
+.compare-right { min-width: 0; }
+.compare-toprow { margin-bottom: 18px; }
 
 .scenario-row {
   display: flex;
@@ -379,36 +533,27 @@ body.taskbar-expanded .scroll-main {
   overflow-y: hidden;
   scroll-snap-type: x proximity;
   padding-bottom: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
-.compare-cards { display: flex; gap: 14px; }
+.compare-cards { display: flex; gap: 20px; }
 .compare-card {
   background: var(--color-surface);
   border: var(--border-w) solid var(--color-ink);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-w) var(--shadow-w) 0 var(--color-ink);
-  padding: 12px;
+  padding: 18px 20px;
   font-size: 12px;
-  flex: 0 0 260px;
+  flex: 0 0 340px;
   scroll-snap-align: start;
 }
 .compare-card.has-warning { border-color: var(--color-warning); box-shadow: var(--shadow-w) var(--shadow-w) 0 var(--color-warning); }
-.compare-card h4 { margin: 0 0 6px; font-size: 13px; }
-.compare-card .compare-char { margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
-.compare-card .compare-vars { margin: 0; font-size: 11px; background: var(--color-bg); padding: 6px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
-.compare-card .compare-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.compare-card h4 { margin: 0 0 8px; font-size: 14px; }
+.compare-card .round-label { font-size: 10px; color: var(--color-ink-soft); letter-spacing: 0.05em; }
+.compare-card .compare-char { margin: 8px 0; white-space: pre-wrap; word-break: break-word; }
+.compare-card .compare-vars { margin: 0; font-size: 11px; background: var(--color-bg); padding: 8px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
+.compare-card .compare-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
 
-.compare-alert {
-  background: var(--color-warning-tint);
-  color: #a53827;
-  border: 2px solid var(--color-warning);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  font-size: 12px;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
-.compare-alert.compare-alert-ok { background: var(--color-verified-tint); color: #1c6b4a; border-color: var(--color-verified); }
+.compare-summary-panel { margin-top: 4px; }
 
 .compare-table { border-collapse: collapse; width: 100%; font-size: 12px; }
 .compare-table th, .compare-table td { border: 2px solid var(--color-ink); padding: 5px 7px; text-align: left; vertical-align: top; }
