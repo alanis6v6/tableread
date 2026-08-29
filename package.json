@@ -5,7 +5,11 @@
   "type": "module",
   "description": "WebMCP Challenge submission: deterministic SillyTavern-card playtest tools exposed via document.modelContext.registerTool().",
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/unit/*.test.js test/golden/*.test.js",
+    "test:e2e": "playwright test",
     "dev": "node scripts/dev-server.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
   }
 }

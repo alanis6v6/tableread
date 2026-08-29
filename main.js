@@ -44,6 +44,17 @@ function el(tag, props = {}, children = []) {
   return node;
 }
 
+/** {已執行 N 輪 -> verified tag} / {尚未執行 -> neutral tag}, shared by the
+ * sidebar scenario nav and the compare-section scenario list. */
+function scenarioStatusTag(scenarioId) {
+  const transcript = sessionRegistry.getTranscript(scenarioId);
+  if (transcript.ok) {
+    const rounds = transcript.rounds.filter((r) => r.round > 0).length;
+    return el("span", { class: "status-tag tag-verified", text: `已執行 ${rounds} 輪` });
+  }
+  return el("span", { class: "status-tag tag-neutral", text: "尚未執行" });
+}
+
 // ---- WebMCP registration ------------------------------------------------
 
 const STATUS_BADGE = {
@@ -90,18 +101,19 @@ async function boot() {
 // ---- Panel: 草稿即時預覽 --------------------------------------------------
 
 function renderChecklist() {
-  const body = document.getElementById("checklist-body");
+  const list = document.getElementById("checklist-list");
   const checklist = draftStore.getChecklistStatus();
-  body.innerHTML = "";
-  for (const aspect of CHECKLIST_ASPECTS) {
+  list.innerHTML = "";
+  CHECKLIST_ASPECTS.forEach((aspect, i) => {
     const entry = checklist[aspect.key] ?? { status: "pending_ideation", note: "" };
-    const tr = el("tr", {}, [
-      el("td", { class: "icon", text: CHECKLIST_STATUS_ICON[entry.status] ?? "⬜" }),
-      el("td", { text: aspect.label }),
-      el("td", { class: "note", text: entry.note || "" }),
+    const row = el("li", { class: "checklist-row" }, [
+      el("span", { class: "checklist-index", text: String(i + 1).padStart(2, "0") }),
+      el("span", { class: "checklist-icon", text: CHECKLIST_STATUS_ICON[entry.status] ?? "⬜" }),
+      el("span", { class: "checklist-label", text: aspect.label }),
+      el("span", { class: "checklist-note", text: entry.note || "" }),
     ]);
-    body.appendChild(tr);
-  }
+    list.appendChild(row);
+  });
 }
 
 function renderDraftFields() {
@@ -262,10 +274,6 @@ function renderScenarioList() {
   for (const id of ids) {
     const scenario = scenarioStore.findScenario(id);
     const label = scenario ? scenario.label : id;
-    const transcript = sessionRegistry.getTranscript(id);
-    const status = transcript.ok
-      ? `已執行 ${transcript.rounds.filter((r) => r.round > 0).length} 輪`
-      : "尚未執行";
 
     const checkbox = el("input", { type: "checkbox" });
     checkbox.checked = compareSelected.has(id);
@@ -278,9 +286,48 @@ function renderScenarioList() {
 
     container.appendChild(
       el("label", { class: "scenario-row" }, [
-        checkbox,
         el("span", { class: "scenario-label", text: `${label}（${id}）` }),
-        el("span", { class: "scenario-status", text: status }),
+        el("span", { class: "scenario-status" }, [scenarioStatusTag(id)]),
+        checkbox,
+      ]),
+    );
+  }
+}
+
+// ---- Sidebar (taskbar): scenario library navigation --------------------
+// Read-only view onto the same scenario/session data as the compare-section
+// list above; its action jumps to the autotest section with that scenario
+// preselected, it does not affect compareSelected.
+
+function renderTaskbarScenarios() {
+  const container = document.getElementById("taskbar-scenario-list");
+  const ids = currentScenarioIds();
+  container.innerHTML = "";
+  if (ids.length === 0) {
+    container.appendChild(el("div", { class: "scenario-nav-empty", text: "尚無情境" }));
+    return;
+  }
+  for (const id of ids) {
+    const scenario = scenarioStore.findScenario(id);
+    const label = scenario ? scenario.label : id;
+
+    const jumpBtn = el("button", { type: "button", class: "pill-btn pill-structure" }, [
+      document.createTextNode("查看"),
+      el("span", { class: "arrow", text: "→" }),
+    ]);
+    jumpBtn.addEventListener("click", () => {
+      const select = document.getElementById("scenario-select");
+      if ([...select.options].some((o) => o.value === id)) {
+        select.value = id;
+        renderAutotest();
+      }
+      document.getElementById("section-autotest").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    container.appendChild(
+      el("div", { class: "scenario-nav-row" }, [
+        el("span", { class: "nav-name", text: label }),
+        el("div", { class: "nav-footer" }, [scenarioStatusTag(id), jumpBtn]),
       ]),
     );
   }
@@ -291,13 +338,25 @@ function renderCompareCards() {
   container.innerHTML = "";
   const ids = [...compareSelected];
   if (ids.length === 0) {
-    container.appendChild(el("div", { class: "hint", text: "在左邊「情境清單管理」勾選至少一個情境來並排比較。" }));
+    container.appendChild(el("div", { class: "hint", text: "在上方「情境清單管理」勾選至少一個情境來並排比較（可左右滑動查看更多張）。" }));
     return;
   }
+
+  // Same compare logic renderCompareSummary() below calls -- used here only
+  // to classify each card's triggered world-book entries as consistent
+  // (in_all) vs inconsistent (in_some) for coloring, no extra state.
+  const compare = compareScenariosLogic.compareScenarios(ids);
+  const inAll = new Set(compare.world_entries_triggered_in_all);
+  const inSome = new Set(compare.world_entries_triggered_in_some);
+
   for (const id of ids) {
     const scenario = scenarioStore.findScenario(id);
     const label = scenario ? scenario.label : id;
-    const card = el("div", { class: "compare-card" }, [el("h4", { text: `${label}（${id}）` })]);
+    const meta = compare.scenarios.find((s) => s.scenario_id === id);
+    const hasWarning = Boolean(meta && !meta.error && meta.patch_miss_count > 0);
+    const card = el("div", { class: hasWarning ? "compare-card has-warning" : "compare-card" }, [
+      el("h4", { text: `${label}（${id}）` }),
+    ]);
 
     // Same source as renderAutotest(): sessionRegistry.getTranscript(id).
     const transcript = sessionRegistry.getTranscript(id);
@@ -305,6 +364,20 @@ function renderCompareCards() {
       card.appendChild(el("div", { class: "hint", text: transcript.error }));
       container.appendChild(card);
       continue;
+    }
+
+    if (meta && meta.patch_miss_count > 0) {
+      card.appendChild(
+        el("span", { class: "status-tag tag-warning", text: `⚠ JSON Patch 缺失 ${meta.patch_miss_count} 次` }),
+      );
+    }
+    if (meta && meta.triggered_world_entries.length > 0) {
+      const tags = el("div", { class: "compare-tags" });
+      for (const comment of meta.triggered_world_entries) {
+        const cls = inSome.has(comment) ? "status-tag tag-warning" : inAll.has(comment) ? "status-tag tag-verified" : "status-tag tag-neutral";
+        tags.appendChild(el("span", { class: cls, text: comment }));
+      }
+      card.appendChild(tags);
     }
 
     const lastRound = transcript.rounds[transcript.rounds.length - 1];
@@ -386,6 +459,7 @@ function renderAll() {
   renderScenarioSelect();
   renderAutotest();
   renderScenarioList();
+  renderTaskbarScenarios();
   renderCompareCards();
   renderCompareSummary();
 }
@@ -394,25 +468,60 @@ draftStore.subscribe(renderAll);
 activityLog.subscribe(renderAll);
 document.getElementById("scenario-select").addEventListener("change", renderAutotest);
 
-// ---- Mode switch (創作者模式 / 遊戲商模式) ---------------------------------
-// Both modes are panels within this one page sharing the same WebMCP tool
-// registration and the same draftStore/scenarioStore/sessionRegistry state --
-// a separate HTML page would reset all of that on navigation.
+// ---- Taskbar collapse/expand --------------------------------------------
+// Non-modal by design: the ONLY thing that toggles the taskbar is this one
+// button. Clicking anywhere in the main content area must never close it.
 
-const modeCreator = document.getElementById("mode-creator");
-const modeMerchant = document.getElementById("mode-merchant");
+const taskbar = document.getElementById("taskbar");
+const taskbarToggle = document.getElementById("taskbar-toggle");
+
+function setTaskbarExpanded(expanded) {
+  taskbar.classList.toggle("expanded", expanded);
+  taskbar.classList.toggle("collapsed", !expanded);
+  document.body.classList.toggle("taskbar-expanded", expanded);
+}
+taskbarToggle.addEventListener("click", () => {
+  setTaskbarExpanded(!taskbar.classList.contains("expanded"));
+});
+
+// ---- Mode switch (創作者｜遊戲商) -----------------------------------------
+// All four sections (checklist dialogue / draft / autotest / compare) are
+// always rendered in one continuous vertical scroll, sharing the same
+// draftStore/scenarioStore/sessionRegistry state. The mode pill no longer
+// hides/shows panels -- it's a quick-jump between the "writing" end and the
+// "comparing" end of that same scroll.
+
 const modeBtnCreator = document.getElementById("mode-btn-creator");
 const modeBtnMerchant = document.getElementById("mode-btn-merchant");
+const scrollMain = document.getElementById("scroll-main");
 
 function setMode(mode) {
   const isMerchant = mode === "merchant";
-  modeCreator.classList.toggle("hidden", isMerchant);
-  modeMerchant.classList.toggle("hidden", !isMerchant);
   modeBtnCreator.classList.toggle("active", !isMerchant);
   modeBtnMerchant.classList.toggle("active", isMerchant);
+  const target = document.getElementById(isMerchant ? "section-compare" : "section-checklist");
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 modeBtnCreator.addEventListener("click", () => setMode("creator"));
 modeBtnMerchant.addEventListener("click", () => setMode("merchant"));
+
+// ---- Scroll position dots (purely visual) --------------------------------
+
+const dots = [...document.querySelectorAll("#scroll-dots .dot")];
+const sections = [...document.querySelectorAll(".snap-section")];
+if ("IntersectionObserver" in window) {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const index = Number(entry.target.dataset.sectionIndex);
+        dots.forEach((dot, i) => dot.classList.toggle("active", i === index));
+      }
+    },
+    { root: scrollMain, threshold: 0.5 },
+  );
+  for (const section of sections) observer.observe(section);
+}
 
 window.__tableread = { draftStore, scenarioStore, sessionRegistry, activityLog, compareScenariosLogic };
 
