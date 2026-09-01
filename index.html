@@ -16,45 +16,61 @@
   <div id="webmcp-status" class="badge badge-pending">檢查 WebMCP 支援中…</div>
 </header>
 
-<main class="layout" id="mode-creator">
-  <section class="panel" id="panel-agent">
-    <h2>Agent 呼叫紀錄</h2>
-    <p class="hint">
-      這裡不是聊天室——網站本身不呼叫任何 LLM。這是呼叫此頁面 WebMCP 工具的 Agent（或你在
-      DevTools 的 WebMCP 面板手動呼叫）留下的活動紀錄，用來確認工具真的有被呼叫、參數與回傳是否正確。
-    </p>
-    <div id="activity-log" class="scroll-list"></div>
-  </section>
+<main class="layout-1a" id="mode-creator">
+  <div class="dashboard-1a">
+    <div class="dashboard-1a-inner">
 
-  <section class="panel" id="panel-draft">
-    <h2>草稿即時預覽</h2>
-    <h3>撰寫進度檢核表</h3>
-    <table class="checklist-table">
-      <tbody id="checklist-body"></tbody>
-    </table>
-    <h3>卡片欄位</h3>
-    <div id="draft-fields" class="draft-fields"></div>
-  </section>
+      <div class="kpi-strip">
+        <div class="kpi-cell" id="kpi-checklist">
+          <div class="kpi-label">檢核完成度</div>
+          <div class="kpi-value" id="kpi-checklist-value">0/8</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-checklist-fill"></div></div>
+        </div>
+        <div class="kpi-cell-split">
+          <div class="kpi-cell" id="kpi-rounds">
+            <div class="kpi-label">已跑輪數</div>
+            <div class="kpi-value" id="kpi-rounds-value">0</div>
+            <div class="kpi-sub" id="kpi-rounds-sub">情境：（尚無情境）</div>
+          </div>
+          <div class="kpi-cell" id="kpi-worldbook">
+            <div class="kpi-label">世界書條目</div>
+            <div class="kpi-value" id="kpi-worldbook-value">0</div>
+            <div class="kpi-sub" id="kpi-worldbook-sub"></div>
+          </div>
+        </div>
+        <div class="kpi-cell" id="kpi-calls">
+          <div class="kpi-label">Agent 呼叫</div>
+          <div class="kpi-value" id="kpi-calls-value">0</div>
+          <div class="kpi-sub" id="kpi-calls-sub"></div>
+        </div>
+      </div>
 
-  <section class="panel panel-wide" id="panel-autotest">
-    <div class="autotest-header">
-      <h2>自動測卡</h2>
-      <label>
-        情境：
-        <select id="scenario-select"></select>
-      </label>
-    </div>
-    <div class="autotest-body">
-      <div class="autotest-col">
-        <h3>對話回放</h3>
-        <div id="transcript" class="scroll-list"></div>
+      <div class="panels-1a">
+        <section class="panel-1a" id="panel-draft-1a">
+          <h3>撰寫檢核表</h3>
+          <div id="checklist-compact"></div>
+          <h3 class="panel-1a-subhead">卡片欄位填寫率</h3>
+          <div id="field-fill-bars"></div>
+        </section>
+
+        <section class="panel-1a" id="panel-transcript-1a">
+          <div class="panel-1a-head">
+            <h3>對話回放</h3>
+            <select id="scenario-select"></select>
+          </div>
+          <div id="transcript"></div>
+        </section>
+
+        <section class="panel-1a" id="panel-qa-1a">
+          <h3>QA / Agent 活動</h3>
+          <div id="qa-summary"></div>
+          <div class="panel-1a-divider"></div>
+          <div id="activity-log-compact"></div>
+        </section>
       </div>
-      <div class="autotest-col">
-        <h3>QA 摘要</h3>
-        <div id="qa-summary" class="scroll-list"></div>
-      </div>
+
     </div>
-  </section>
+  </div>
 </main>
 
 <main class="layout hidden" id="mode-merchant">

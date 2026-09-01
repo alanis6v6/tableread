@@ -7,23 +7,16 @@ import {
   compareScenariosLogic,
 } from "./src/tools/registerTools.js";
 import { CHECKLIST_ASPECTS, CHECKLIST_STATUS_ICON } from "./src/tools/checklist.js";
-import { SCALAR_FIELD_KEYS, ARRAY_FIELD_KEYS } from "./src/tools/draftStore.js";
 
-const FIELD_LABELS = {
-  name: "name",
-  world_name: "world_name（世界書名稱）",
-  description: "description",
-  personality: "personality",
-  scenario: "scenario",
-  first_mes: "first_mes",
-  mes_example: "mes_example",
-  system_prompt: "system_prompt",
-  creator_notes: "creator_notes",
-  tags: "tags",
-  alternate_greetings: "alternate_greetings",
-  character_book_entries: "character_book_entries（世界書條目數）",
-  regex_scripts: "regex_scripts（美化腳本數）",
-};
+// Field-fill-rate grouping for the creator-mode KPI dashboard (option 1a).
+// "必填" is the minimum set a card needs to actually run in SillyTavern;
+// everything else scalar/array is "選填". character_book_entries and
+// regex_scripts get their own dedicated bars instead of folding into either
+// group, since their "fill rate" means something different (fraction of
+// entries/scripts that are actually usable, not fraction of fields typed).
+const REQUIRED_FIELD_KEYS = ["name", "description", "personality", "first_mes"];
+const OPTIONAL_SCALAR_KEYS = ["world_name", "scenario", "mes_example", "system_prompt", "creator_notes"];
+const OPTIONAL_ARRAY_KEYS = ["tags", "alternate_greetings"];
 
 function escapeHtml(s) {
   return String(s ?? "")
@@ -87,46 +80,99 @@ async function boot() {
   window.__tableread.tools = result.tools;
 }
 
-// ---- Panel: 草稿即時預覽 --------------------------------------------------
+// ---- Panel: 撰寫檢核表 + 卡片欄位填寫率 -----------------------------------
+// Compact by design (option 1a's "reduce clutter" goal) -- just icon + label,
+// no per-item notes; the fuller checklist detail still lives in the raw
+// draftStore state (window.__tableread.draftStore) for anyone who needs it.
 
-function renderChecklist() {
-  const body = document.getElementById("checklist-body");
+function renderChecklistCompact() {
+  const container = document.getElementById("checklist-compact");
   const checklist = draftStore.getChecklistStatus();
-  body.innerHTML = "";
-  for (const aspect of CHECKLIST_ASPECTS) {
-    const entry = checklist[aspect.key] ?? { status: "pending_ideation", note: "" };
-    const tr = el("tr", {}, [
-      el("td", { class: "icon", text: CHECKLIST_STATUS_ICON[entry.status] ?? "⬜" }),
-      el("td", { text: aspect.label }),
-      el("td", { class: "note", text: entry.note || "" }),
-    ]);
-    body.appendChild(tr);
-  }
-}
-
-function renderDraftFields() {
-  const container = document.getElementById("draft-fields");
-  const { fields } = draftStore.getSnapshot();
   container.innerHTML = "";
-  const dl = el("dl");
-  for (const key of [...SCALAR_FIELD_KEYS, ...ARRAY_FIELD_KEYS]) {
-    const label = FIELD_LABELS[key] ?? key;
-    dl.appendChild(el("dt", { text: label }));
-    if (ARRAY_FIELD_KEYS.includes(key)) {
-      const arr = fields[key] ?? [];
-      dl.appendChild(el("dd", arr.length ? { text: `${arr.length} 項` } : { class: "empty", text: "（空）" }));
-    } else {
-      const val = fields[key] ?? "";
-      dl.appendChild(val ? el("dd", { text: val }) : el("dd", { class: "empty", text: "（尚未填寫）" }));
-    }
+  for (const aspect of CHECKLIST_ASPECTS) {
+    const entry = checklist[aspect.key] ?? { status: "pending_ideation" };
+    container.appendChild(
+      el("div", { class: "checklist-compact-row" }, [
+        el("span", { class: "icon", text: CHECKLIST_STATUS_ICON[entry.status] ?? "⬜" }),
+        el("span", { class: "label", text: aspect.label }),
+      ]),
+    );
   }
-  container.appendChild(dl);
 }
 
-// ---- Panel: Agent 呼叫紀錄 ------------------------------------------------
+function pctFilledScalar(keys, fields) {
+  if (keys.length === 0) return 0;
+  const filled = keys.filter((k) => String(fields[k] ?? "").trim() !== "").length;
+  return Math.round((filled / keys.length) * 100);
+}
 
-function renderActivityLog() {
-  const container = document.getElementById("activity-log");
+function pctFilledMixed(scalarKeys, arrayKeys, fields) {
+  const total = scalarKeys.length + arrayKeys.length;
+  if (total === 0) return 0;
+  const filledScalar = scalarKeys.filter((k) => String(fields[k] ?? "").trim() !== "").length;
+  const filledArray = arrayKeys.filter((k) => (fields[k] ?? []).length > 0).length;
+  return Math.round(((filledScalar + filledArray) / total) * 100);
+}
+
+// A world-book entry counts as "usable" once it can actually match (has
+// keys, or is constant) and has content to inject -- not just "exists".
+function worldbookFillPct(entries) {
+  if (!entries || entries.length === 0) return 0;
+  const usable = entries.filter((e) => {
+    const hasKeys = (e.keys && e.keys.length > 0) || (e.key && e.key.length > 0) || e.constant === true;
+    return hasKeys && String(e.content ?? "").trim() !== "";
+  }).length;
+  return Math.round((usable / entries.length) * 100);
+}
+
+// A regex script counts as "usable" once it has a pattern to match against;
+// an empty replaceString is a legitimate "delete the match" script, not an
+// incomplete one.
+function regexFillPct(scripts) {
+  if (!scripts || scripts.length === 0) return 0;
+  const usable = scripts.filter((s) => String(s.findRegex ?? "").trim() !== "").length;
+  return Math.round((usable / scripts.length) * 100);
+}
+
+function renderFieldFillBars() {
+  const container = document.getElementById("field-fill-bars");
+  const { fields } = draftStore.getSnapshot();
+  const bars = [
+    { label: "必填欄位", pct: pctFilledScalar(REQUIRED_FIELD_KEYS, fields) },
+    { label: "選填欄位", pct: pctFilledMixed(OPTIONAL_SCALAR_KEYS, OPTIONAL_ARRAY_KEYS, fields) },
+    { label: "世界書", pct: worldbookFillPct(fields.character_book_entries) },
+    { label: "regex 腳本", pct: regexFillPct(fields.regex_scripts) },
+  ];
+  container.innerHTML = "";
+  for (const bar of bars) {
+    const fill = el("div", { class: "field-bar-fill" });
+    fill.style.width = `${bar.pct}%`;
+    container.appendChild(
+      el("div", { class: "field-bar" }, [
+        el("div", { class: "field-bar-head" }, [
+          el("span", { text: bar.label }),
+          el("span", { class: "pct", text: `${bar.pct}%` }),
+        ]),
+        el("div", { class: "field-bar-track" }, [fill]),
+      ]),
+    );
+  }
+}
+
+// ---- Panel: QA / Agent 活動 (compact) -------------------------------------
+// Same activity feed as before, just rendered compact (tool name + time,
+// error rows in red) to match option 1a's density; click a row to expand its
+// full args/result JSON in place, so the "verify tool calls" use case from
+// the original panel isn't lost, just collapsed by default.
+
+const expandedLogKeys = new Set();
+
+function logKey(entry) {
+  return `${entry.at}-${entry.toolName}`;
+}
+
+function renderActivityLogCompact() {
+  const container = document.getElementById("activity-log-compact");
   const entries = activityLog.getEntries();
   container.innerHTML = "";
   if (entries.length === 0) {
@@ -134,17 +180,28 @@ function renderActivityLog() {
     return;
   }
   for (const entry of entries.slice().reverse()) {
-    const time = new Date(entry.at).toLocaleTimeString();
+    const key = logKey(entry);
     const isError = entry.result && entry.result.ok === false;
-    const block = el("div", { class: "log-entry" }, [
-      el("span", { class: "log-name", text: entry.toolName }),
-      el("span", { text: ` · ${time}` }),
-      isError ? el("span", { class: "log-error", text: " · 錯誤" }) : document.createTextNode(""),
-      el("pre", { text: `args: ${JSON.stringify(entry.args)}\nresult: ${JSON.stringify(entry.result)}` }),
-    ]);
-    container.appendChild(block);
+    const time = new Date(entry.at).toLocaleTimeString();
+    const row = el("div", {
+      class: `log-compact-row${isError ? " log-compact-error" : ""}`,
+      text: `${entry.toolName} · ${time}`,
+    });
+    row.addEventListener("click", () => {
+      if (expandedLogKeys.has(key)) expandedLogKeys.delete(key);
+      else expandedLogKeys.add(key);
+      renderActivityLogCompact();
+    });
+    container.appendChild(row);
+    if (expandedLogKeys.has(key)) {
+      container.appendChild(
+        el("pre", {
+          class: "log-compact-detail",
+          text: `args: ${JSON.stringify(entry.args)}\nresult: ${JSON.stringify(entry.result)}`,
+        }),
+      );
+    }
   }
-  container.scrollTop = 0;
 }
 
 // ---- Panel: 自動測卡（對話回放 + QA 摘要） --------------------------------
@@ -172,41 +229,18 @@ function renderScenarioSelect() {
   if (ids.includes(previous)) select.value = previous;
 }
 
-function renderAutotest() {
-  const select = document.getElementById("scenario-select");
-  const scenarioId = select.value;
-  const transcriptEl = document.getElementById("transcript");
-  const qaEl = document.getElementById("qa-summary");
-
-  if (!scenarioId) {
-    transcriptEl.innerHTML = '<div class="hint">選一個已經 run_scenario 過的情境來查看回放。</div>';
-    qaEl.innerHTML = "";
-    return;
-  }
+// QA data for a scenario, derived entirely from data already returned by the
+// tools (transcript + the assembled card's world-book entries) -- no extra
+// state. Shared by the QA panel and the KPI strip above it so both agree.
+function getQaData(scenarioId) {
+  const empty = { ok: false, error: null, rounds: [], totalRounds: 0, patchMisses: 0, neverTriggeredText: "", neverTriggeredCount: 0, warnings: [] };
+  if (!scenarioId) return empty;
 
   const result = sessionRegistry.getTranscript(scenarioId);
-  if (!result.ok) {
-    transcriptEl.innerHTML = `<div class="hint">${escapeHtml(result.error)}</div>`;
-    qaEl.innerHTML = "";
-    return;
-  }
+  if (!result.ok) return { ...empty, error: result.error };
 
-  transcriptEl.innerHTML = "";
-  for (const round of result.rounds) {
-    const block = el("div", { class: "round-block" });
-    block.appendChild(el("div", { class: "round-label", text: `第 ${round.round} 頁` }));
-    if (round.player_raw !== null) {
-      block.appendChild(el("div", { class: "bubble-player", text: round.player_raw }));
-    }
-    block.appendChild(el("div", { class: "bubble-char", html: round.char_html }));
-    transcriptEl.appendChild(block);
-  }
-
-  // QA summary: derived entirely from data already returned by the tools
-  // (transcript + the assembled card's world-book entries), no extra state.
-  qaEl.innerHTML = "";
   const totalRounds = result.rounds.filter((r) => r.round > 0).length;
-  const allWarnings = result.rounds.flatMap((r) => r.warnings.map((w) => ({ round: r.round, warning: w })));
+  const warnings = result.rounds.flatMap((r) => r.warnings.map((w) => ({ round: r.round, warning: w })));
   const patchMisses = result.rounds.filter((r) => r.round > 0 && !r.patch_found).length;
 
   const triggeredComments = new Set();
@@ -220,25 +254,99 @@ function renderAutotest() {
   const neverTriggered = allComments.filter((c) => !triggeredComments.has(c));
   const neverTriggeredText = allComments.length === 0 ? "（尚無世界書條目）" : neverTriggered.length ? neverTriggered.join("、") : "無";
 
-  qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: "已跑輪數" }), el("span", { text: String(totalRounds) })]));
+  return {
+    ok: true,
+    error: null,
+    rounds: result.rounds,
+    totalRounds,
+    patchMisses,
+    neverTriggeredText,
+    neverTriggeredCount: neverTriggered.length,
+    warnings,
+  };
+}
+
+function renderAutotest() {
+  const select = document.getElementById("scenario-select");
+  const scenarioId = select.value;
+  const transcriptEl = document.getElementById("transcript");
+  const qaEl = document.getElementById("qa-summary");
+
+  if (!scenarioId) {
+    transcriptEl.innerHTML = '<div class="hint">選一個已經 run_scenario 過的情境來查看回放。</div>';
+    qaEl.innerHTML = "";
+    return;
+  }
+
+  const qa = getQaData(scenarioId);
+  if (!qa.ok) {
+    transcriptEl.innerHTML = `<div class="hint">${escapeHtml(qa.error)}</div>`;
+    qaEl.innerHTML = "";
+    return;
+  }
+
+  transcriptEl.innerHTML = "";
+  for (const round of qa.rounds) {
+    const block = el("div", { class: "round-block" });
+    block.appendChild(el("div", { class: "round-label", text: `第 ${round.round} 頁` }));
+    if (round.player_raw !== null) {
+      block.appendChild(el("div", { class: "bubble-player", text: round.player_raw }));
+    }
+    block.appendChild(el("div", { class: "bubble-char", html: round.char_html }));
+    transcriptEl.appendChild(block);
+  }
+
+  qaEl.innerHTML = "";
+  qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: "已跑輪數" }), el("span", { text: String(qa.totalRounds) })]));
   qaEl.appendChild(
-    el("div", { class: "qa-row" }, [el("span", { text: "JSON Patch 缺失次數" }), el("span", { text: String(patchMisses) })]),
+    el("div", { class: "qa-row" }, [el("span", { text: "JSON Patch 缺失次數" }), el("span", { text: String(qa.patchMisses) })]),
   );
   qaEl.appendChild(
     el("div", { class: "qa-row" }, [
       el("span", { text: "從未觸發的世界書條目" }),
-      el("span", { text: neverTriggeredText }),
+      el("span", { text: qa.neverTriggeredText }),
     ]),
   );
-  if (allWarnings.length === 0) {
+  if (qa.warnings.length === 0) {
     qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: "regex/patch 警告" }), el("span", { text: "無" })]));
   } else {
-    for (const w of allWarnings) {
+    for (const w of qa.warnings) {
       qaEl.appendChild(
         el("div", { class: "qa-row qa-warning" }, [el("span", { text: `第 ${w.round} 頁` }), el("span", { text: w.warning })]),
       );
     }
   }
+}
+
+// ---- KPI strip -------------------------------------------------------------
+// Top-of-dashboard summary (option 1a): checklist completion, rounds run for
+// the currently selected scenario, world-book entry count + never-triggered
+// warning, and total agent tool calls + error count.
+
+function renderKpis() {
+  const checklist = draftStore.getChecklistStatus();
+  const knownCount = CHECKLIST_ASPECTS.filter((a) => checklist[a.key]?.status === "known").length;
+  document.getElementById("kpi-checklist-value").textContent = `${knownCount}/${CHECKLIST_ASPECTS.length}`;
+  document.getElementById("kpi-checklist-fill").style.width = `${Math.round((knownCount / CHECKLIST_ASPECTS.length) * 100)}%`;
+
+  const scenarioId = document.getElementById("scenario-select").value;
+  const qa = getQaData(scenarioId);
+  document.getElementById("kpi-rounds-value").textContent = String(qa.totalRounds);
+  document.getElementById("kpi-rounds-sub").textContent = scenarioId ? `情境：${scenarioId}` : "情境：（尚無情境）";
+
+  const { fields } = draftStore.getSnapshot();
+  const entries = fields.character_book_entries || [];
+  document.getElementById("kpi-worldbook-value").textContent = String(entries.length);
+  const wbSub = document.getElementById("kpi-worldbook-sub");
+  wbSub.textContent = qa.neverTriggeredCount > 0 ? `${qa.neverTriggeredCount} 條從未觸發` : entries.length > 0 ? "已全數觸發" : "";
+  wbSub.classList.toggle("kpi-sub-warn", qa.neverTriggeredCount > 0);
+
+  const logEntries = activityLog.getEntries();
+  const errorCount = logEntries.filter((e) => e.result && e.result.ok === false).length;
+  document.getElementById("kpi-calls-value").textContent = String(logEntries.length);
+  const callsSub = document.getElementById("kpi-calls-sub");
+  callsSub.textContent = errorCount > 0 ? `${errorCount} 次錯誤` : logEntries.length > 0 ? "無錯誤" : "";
+  callsSub.classList.toggle("kpi-sub-warn", errorCount > 0);
 }
 
 // ---- Panel: 遊戲商模式（多情境比較） --------------------------------------
@@ -380,11 +488,12 @@ function renderCompareSummary() {
 // ---- Wiring --------------------------------------------------------------
 
 function renderAll() {
-  renderChecklist();
-  renderDraftFields();
-  renderActivityLog();
+  renderChecklistCompact();
+  renderFieldFillBars();
+  renderActivityLogCompact();
   renderScenarioSelect();
   renderAutotest();
+  renderKpis();
   renderScenarioList();
   renderCompareCards();
   renderCompareSummary();
@@ -392,7 +501,10 @@ function renderAll() {
 
 draftStore.subscribe(renderAll);
 activityLog.subscribe(renderAll);
-document.getElementById("scenario-select").addEventListener("change", renderAutotest);
+document.getElementById("scenario-select").addEventListener("change", () => {
+  renderAutotest();
+  renderKpis();
+});
 
 // ---- Mode switch (創作者模式 / 遊戲商模式) ---------------------------------
 // Both modes are panels within this one page sharing the same WebMCP tool
