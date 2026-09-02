@@ -26,6 +26,7 @@
   --taskbar-w: 232px;
   --gutter: 22px;
   --console-h: 40vh;
+  --kpi-strip-h: 68px;
 }
 
 /* -----------------------------------------------------------------------
@@ -379,14 +380,59 @@ body.taskbar-expanded .content-wrap {
   min-height: 100vh;
 }
 
+/* ---------------------------------------------------------------------
+   KPI strip -- persistent summary bar above the snap-scroll sections
+   (checklist completion / rounds run / world-book entries / agent calls).
+   Lives outside .snap-section so it never counts toward the 4 vertically-
+   snapped sections and stays visible no matter which one is in view. A
+   large area, so per the hard rule its background is --color-surface, not
+   a solid accent fill -- only the checklist fill bar and warn states use
+   accent color. Height is fixed (--kpi-strip-h) so .scroll-main below can
+   subtract it exactly and still fill the rest of the viewport.
+--------------------------------------------------------------------- */
+.kpi-strip {
+  height: var(--kpi-strip-h);
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--color-ink-muted);
+  border-bottom: var(--border-w) solid var(--color-ink-muted);
+  /* Clears the collapsed taskbar's fixed top-left icon button (top:16px,
+     left:16px, ~34px tall/~100px wide) so the first cell's text never sits
+     under it. Not needed once the taskbar is expanded -- content-wrap
+     itself is already pushed right by --taskbar-w then. */
+  padding-left: 108px;
+}
+body.taskbar-expanded .kpi-strip { padding-left: 0; }
+
+.kpi-cell {
+  flex: 1 1 150px;
+  min-width: 150px;
+  background: var(--color-surface);
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+}
+.kpi-label { font-size: 10px; color: var(--color-ink-muted); text-transform: uppercase; letter-spacing: .06em; }
+.kpi-value { font-size: 20px; font-weight: 800; font-family: ui-monospace, Menlo, monospace; color: var(--color-ink); }
+.kpi-bar { display: block; height: 4px; background: var(--color-ink-muted); border-radius: 2px; overflow: hidden; }
+.kpi-bar-fill { display: block; height: 100%; background: var(--color-structure); box-shadow: 0 0 4px var(--color-structure); }
+.kpi-sub { display: block; font-size: 10px; color: var(--color-ink-muted); min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi-sub.kpi-sub-warn { color: var(--color-warning); }
+
 .scroll-main {
-  height: 100vh;
+  height: calc(100vh - var(--kpi-strip-h));
   overflow-y: auto;
   scroll-snap-type: y mandatory;
 }
 
 body.taskbar-expanded .scroll-main {
-  height: calc(100vh - (var(--gutter) * 2));
+  height: calc(100vh - (var(--gutter) * 2) - var(--kpi-strip-h));
   border: var(--border-w) solid var(--color-structure);
   border-radius: var(--radius-md);
   /* Faint edge glow only -- this is the "wrapped in a frame" cue, not a
@@ -402,9 +448,6 @@ body.taskbar-expanded .scroll-main {
   scroll-snap-stop: always;
   overflow-y: auto;
   padding: clamp(20px, 4vw, 48px);
-  /* Clears the collapsed taskbar's fixed top-left icon button (top:16px,
-     ~34px tall) so section titles/anchor cards never sit under it. */
-  padding-top: 76px;
 }
 
 .section-inner { max-width: 1160px; }
@@ -508,7 +551,8 @@ body.taskbar-expanded .scroll-main {
 
 /* ---------------------------------------------------------------------
    ② Draft preview -- a name/description banner anchoring the section,
-   then two loose key-value quadrants (not a table).
+   then two loose key-value quadrants (not a table), then the field-fill
+   bars (卡片欄位填寫率) as a third full-width card below them.
 --------------------------------------------------------------------- */
 .draft-banner {
   background: var(--color-surface);
@@ -546,6 +590,14 @@ body.taskbar-expanded .scroll-main {
   font-size: 11px;
   color: var(--color-warning);
 }
+
+.field-fill-card { margin-top: 20px; }
+.field-bar { margin-bottom: 12px; }
+.field-bar:last-child { margin-bottom: 0; }
+.field-bar-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--color-ink-muted); margin-bottom: 4px; }
+.field-bar-head .pct { font-family: ui-monospace, Menlo, monospace; color: var(--color-ink); }
+.field-bar-track { height: 5px; background: var(--color-ink-muted); border-radius: 3px; overflow: hidden; }
+.field-bar-fill { height: 100%; background: var(--color-structure); box-shadow: 0 0 4px var(--color-structure); }
 
 /* ---------------------------------------------------------------------
    ③ Autotest -- the section's own background stays neutral (surface, one

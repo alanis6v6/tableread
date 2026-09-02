@@ -40,6 +40,16 @@ const CHECKLIST_GROUPS = [
   { label: "技術設定", desc: "確認角色心理狀態進展脈絡，並決定要不要上 MVU 動態變量卡。", keys: ["psych_arc", "mvu"] },
 ];
 
+// Field-fill-rate grouping for the "卡片欄位填寫率" bars in the draft section.
+// "必填" is the minimum set a card needs to actually run in SillyTavern;
+// everything else scalar/array is "選填". character_book_entries and
+// regex_scripts get their own dedicated bars instead of folding into either
+// group, since their "fill rate" means something different (fraction of
+// entries/scripts that are actually usable, not fraction of fields typed).
+const REQUIRED_FIELD_KEYS = ["name", "description", "personality", "first_mes"];
+const OPTIONAL_SCALAR_KEYS = ["world_name", "scenario", "mes_example", "system_prompt", "creator_notes"];
+const OPTIONAL_ARRAY_KEYS = ["tags", "alternate_greetings"];
+
 function escapeHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
@@ -113,7 +123,7 @@ async function boot() {
   window.__tableread.tools = result.tools;
 }
 
-// ---- Panel: 草稿即時預覽 --------------------------------------------------
+// ---- Panel: 檢核表對話 ------------------------------------------------
 
 function renderChecklist() {
   const checklist = draftStore.getChecklistStatus();
@@ -149,6 +159,8 @@ function renderChecklist() {
     );
   }
 }
+
+// ---- Panel: 草稿即時預覽 + 卡片欄位填寫率 ---------------------------------
 
 /** Purely presentational data-quality checks -- derived only from fields
  * already in draftStore, no new validation logic added to the store. */
@@ -194,6 +206,65 @@ function renderDraftFields() {
 
   renderKvBlock("draft-quadrant-cast", DRAFT_LEFT_KEYS, fields);
   renderKvBlock("draft-quadrant-tech", DRAFT_RIGHT_KEYS, fields);
+}
+
+function pctFilledScalar(keys, fields) {
+  if (keys.length === 0) return 0;
+  const filled = keys.filter((k) => String(fields[k] ?? "").trim() !== "").length;
+  return Math.round((filled / keys.length) * 100);
+}
+
+function pctFilledMixed(scalarKeys, arrayKeys, fields) {
+  const total = scalarKeys.length + arrayKeys.length;
+  if (total === 0) return 0;
+  const filledScalar = scalarKeys.filter((k) => String(fields[k] ?? "").trim() !== "").length;
+  const filledArray = arrayKeys.filter((k) => (fields[k] ?? []).length > 0).length;
+  return Math.round(((filledScalar + filledArray) / total) * 100);
+}
+
+// A world-book entry counts as "usable" once it can actually match (has
+// keys, or is constant) and has content to inject -- not just "exists".
+function worldbookFillPct(entries) {
+  if (!entries || entries.length === 0) return 0;
+  const usable = entries.filter((e) => {
+    const hasKeys = (e.keys && e.keys.length > 0) || (e.key && e.key.length > 0) || e.constant === true;
+    return hasKeys && String(e.content ?? "").trim() !== "";
+  }).length;
+  return Math.round((usable / entries.length) * 100);
+}
+
+// A regex script counts as "usable" once it has a pattern to match against;
+// an empty replaceString is a legitimate "delete the match" script, not an
+// incomplete one.
+function regexFillPct(scripts) {
+  if (!scripts || scripts.length === 0) return 0;
+  const usable = scripts.filter((s) => String(s.findRegex ?? "").trim() !== "").length;
+  return Math.round((usable / scripts.length) * 100);
+}
+
+function renderFieldFillBars() {
+  const container = document.getElementById("field-fill-bars");
+  const { fields } = draftStore.getSnapshot();
+  const bars = [
+    { label: "必填欄位", pct: pctFilledScalar(REQUIRED_FIELD_KEYS, fields) },
+    { label: "選填欄位", pct: pctFilledMixed(OPTIONAL_SCALAR_KEYS, OPTIONAL_ARRAY_KEYS, fields) },
+    { label: "世界書", pct: worldbookFillPct(fields.character_book_entries) },
+    { label: "regex 腳本", pct: regexFillPct(fields.regex_scripts) },
+  ];
+  container.innerHTML = "";
+  for (const bar of bars) {
+    const fill = el("div", { class: "field-bar-fill" });
+    fill.style.width = `${bar.pct}%`;
+    container.appendChild(
+      el("div", { class: "field-bar" }, [
+        el("div", { class: "field-bar-head" }, [
+          el("span", { text: bar.label }),
+          el("span", { class: "pct", text: `${bar.pct}%` }),
+        ]),
+        el("div", { class: "field-bar-track" }, [fill]),
+      ]),
+    );
+  }
 }
 
 // ---- Panel: Agent 呼叫紀錄 ------------------------------------------------
@@ -245,6 +316,43 @@ function renderScenarioSelect() {
   if (ids.includes(previous)) select.value = previous;
 }
 
+// QA data for a scenario, derived entirely from data already returned by the
+// tools (transcript + the assembled card's world-book entries) -- no extra
+// state. Shared by the autotest chips and the KPI strip so both agree.
+function getQaData(scenarioId) {
+  const empty = { ok: false, error: null, rounds: [], totalRounds: 0, patchMisses: 0, neverTriggeredText: "", neverTriggeredCount: 0, warnings: [] };
+  if (!scenarioId) return empty;
+
+  const result = sessionRegistry.getTranscript(scenarioId);
+  if (!result.ok) return { ...empty, error: result.error };
+
+  const totalRounds = result.rounds.filter((r) => r.round > 0).length;
+  const warnings = result.rounds.flatMap((r) => r.warnings.map((w) => ({ round: r.round, warning: w })));
+  const patchMisses = result.rounds.filter((r) => r.round > 0 && !r.patch_found).length;
+
+  const triggeredComments = new Set();
+  for (const entry of activityLog.getEntries()) {
+    if (entry.toolName === "get_playtest_context" && entry.args.scenario_id === scenarioId && entry.result?.ok) {
+      for (const e of entry.result.active_world_entries) triggeredComments.add(e.comment);
+    }
+  }
+  const { fields } = draftStore.getSnapshot();
+  const allComments = (fields.character_book_entries || []).map((e) => e.comment || `(id ${e.id})`);
+  const neverTriggered = allComments.filter((c) => !triggeredComments.has(c));
+  const neverTriggeredText = allComments.length === 0 ? "（尚無世界書條目）" : neverTriggered.length ? neverTriggered.join("、") : "無";
+
+  return {
+    ok: true,
+    error: null,
+    rounds: result.rounds,
+    totalRounds,
+    patchMisses,
+    neverTriggeredText,
+    neverTriggeredCount: neverTriggered.length,
+    warnings,
+  };
+}
+
 function renderAutotest() {
   const select = document.getElementById("scenario-select");
   const scenarioId = select.value;
@@ -257,15 +365,15 @@ function renderAutotest() {
     return;
   }
 
-  const result = sessionRegistry.getTranscript(scenarioId);
-  if (!result.ok) {
-    transcriptEl.innerHTML = `<div class="hint">${escapeHtml(result.error)}</div>`;
+  const qa = getQaData(scenarioId);
+  if (!qa.ok) {
+    transcriptEl.innerHTML = `<div class="hint">${escapeHtml(qa.error)}</div>`;
     chipsEl.innerHTML = "";
     return;
   }
 
   transcriptEl.innerHTML = "";
-  for (const round of result.rounds) {
+  for (const round of qa.rounds) {
     transcriptEl.appendChild(el("div", { class: "chat-round-label", text: `第 ${round.round} 頁` }));
     if (round.player_raw !== null) {
       transcriptEl.appendChild(el("div", { class: "chat-row player" }, [el("div", { class: "chat-bubble player", text: round.player_raw })]));
@@ -273,33 +381,54 @@ function renderAutotest() {
     transcriptEl.appendChild(el("div", { class: "chat-row char" }, [el("div", { class: "chat-bubble char", html: round.char_html })]));
   }
 
-  // QA chips: derived entirely from data already returned by the tools
-  // (transcript + the assembled card's world-book entries), no extra state.
-  // Each chip only renders when its condition actually holds -- no
-  // always-on placeholder chips.
+  // QA chips: derived from getQaData(), the same source renderKpis() reads
+  // for the KPI strip, so both agree. Each chip only renders when its
+  // condition actually holds -- no always-on placeholder chips.
   chipsEl.innerHTML = "";
-  const allWarnings = result.rounds.flatMap((r) => r.warnings);
-  const patchMisses = result.rounds.filter((r) => r.round > 0 && !r.patch_found).length;
-
-  const triggeredComments = new Set();
-  for (const entry of activityLog.getEntries()) {
-    if (entry.toolName === "get_playtest_context" && entry.args.scenario_id === scenarioId && entry.result?.ok) {
-      for (const e of entry.result.active_world_entries) triggeredComments.add(e.comment);
-    }
-  }
   const { fields } = draftStore.getSnapshot();
-  const allComments = (fields.character_book_entries || []).map((e) => e.comment || `(id ${e.id})`);
-  const neverTriggered = allComments.filter((c) => !triggeredComments.has(c));
+  const worldbookEntryCount = (fields.character_book_entries || []).length;
 
-  if (allComments.length > 0 && neverTriggered.length === 0) {
+  if (worldbookEntryCount > 0 && qa.neverTriggeredCount === 0) {
     chipsEl.appendChild(el("span", { class: "status-tag tag-verified qa-chip", text: "世界書 ✓" }));
   }
-  if (allWarnings.length > 0) {
+  if (qa.warnings.length > 0) {
     chipsEl.appendChild(el("span", { class: "status-tag tag-warning qa-chip", text: "regex ⚠" }));
   }
-  if (patchMisses > 0) {
+  if (qa.patchMisses > 0) {
     chipsEl.appendChild(el("span", { class: "status-tag tag-structure qa-chip", text: "節奏 ◐" }));
   }
+}
+
+// ---- KPI strip -------------------------------------------------------------
+// Persistent summary bar above the snap-scroll sections: checklist
+// completion, rounds run for the currently selected scenario, world-book
+// entry count + never-triggered warning, and total agent tool calls + error
+// count. Reads getQaData() so it always agrees with the autotest chips.
+
+function renderKpis() {
+  const checklist = draftStore.getChecklistStatus();
+  const knownCount = CHECKLIST_ASPECTS.filter((a) => checklist[a.key]?.status === "known").length;
+  document.getElementById("kpi-checklist-value").textContent = `${knownCount}/${CHECKLIST_ASPECTS.length}`;
+  document.getElementById("kpi-checklist-fill").style.width = `${Math.round((knownCount / CHECKLIST_ASPECTS.length) * 100)}%`;
+
+  const scenarioId = document.getElementById("scenario-select").value;
+  const qa = getQaData(scenarioId);
+  document.getElementById("kpi-rounds-value").textContent = String(qa.totalRounds);
+  document.getElementById("kpi-rounds-sub").textContent = scenarioId ? `情境：${scenarioId}` : "情境：（尚無情境）";
+
+  const { fields } = draftStore.getSnapshot();
+  const entries = fields.character_book_entries || [];
+  document.getElementById("kpi-worldbook-value").textContent = String(entries.length);
+  const wbSub = document.getElementById("kpi-worldbook-sub");
+  wbSub.textContent = qa.neverTriggeredCount > 0 ? `${qa.neverTriggeredCount} 條從未觸發` : entries.length > 0 ? "已全數觸發" : "";
+  wbSub.classList.toggle("kpi-sub-warn", qa.neverTriggeredCount > 0);
+
+  const logEntries = activityLog.getEntries();
+  const errorCount = logEntries.filter((e) => e.result && e.result.ok === false).length;
+  document.getElementById("kpi-calls-value").textContent = String(logEntries.length);
+  const callsSub = document.getElementById("kpi-calls-sub");
+  callsSub.textContent = errorCount > 0 ? `${errorCount} 次錯誤` : logEntries.length > 0 ? "無錯誤" : "";
+  callsSub.classList.toggle("kpi-sub-warn", errorCount > 0);
 }
 
 // ---- Panel: 遊戲商模式（多情境比較） --------------------------------------
@@ -526,9 +655,11 @@ function renderCompareSummary() {
 function renderAll() {
   renderChecklist();
   renderDraftFields();
+  renderFieldFillBars();
   renderActivityLog();
   renderScenarioSelect();
   renderAutotest();
+  renderKpis();
   renderScenarioList();
   renderTaskbarScenarios();
   renderCompareCards();
@@ -538,7 +669,10 @@ function renderAll() {
 
 draftStore.subscribe(renderAll);
 activityLog.subscribe(renderAll);
-document.getElementById("scenario-select").addEventListener("change", renderAutotest);
+document.getElementById("scenario-select").addEventListener("change", () => {
+  renderAutotest();
+  renderKpis();
+});
 
 // ---- Taskbar collapse/expand --------------------------------------------
 // Non-modal by design: the ONLY thing that toggles the taskbar is this one

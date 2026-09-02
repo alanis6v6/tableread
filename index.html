@@ -28,6 +28,30 @@
 </aside>
 
 <div id="content-wrap" class="content-wrap">
+
+  <div class="kpi-strip" id="kpi-strip">
+    <div class="kpi-cell" id="kpi-checklist">
+      <span class="kpi-label">檢核</span>
+      <span class="kpi-value" id="kpi-checklist-value">0/8</span>
+      <span class="kpi-bar"><span class="kpi-bar-fill" id="kpi-checklist-fill"></span></span>
+    </div>
+    <div class="kpi-cell" id="kpi-rounds">
+      <span class="kpi-label">已跑輪數</span>
+      <span class="kpi-value" id="kpi-rounds-value">0</span>
+      <span class="kpi-sub" id="kpi-rounds-sub">情境：（尚無情境）</span>
+    </div>
+    <div class="kpi-cell" id="kpi-worldbook">
+      <span class="kpi-label">世界書條目</span>
+      <span class="kpi-value" id="kpi-worldbook-value">0</span>
+      <span class="kpi-sub" id="kpi-worldbook-sub"></span>
+    </div>
+    <div class="kpi-cell" id="kpi-calls">
+      <span class="kpi-label">Agent 呼叫</span>
+      <span class="kpi-value" id="kpi-calls-value">0</span>
+      <span class="kpi-sub" id="kpi-calls-sub"></span>
+    </div>
+  </div>
+
   <main id="scroll-main" class="scroll-main">
 
     <section class="snap-section" id="section-checklist" data-section-index="0">
@@ -59,6 +83,11 @@
             <div class="quadrant-label">情感偏好／技術欄位</div>
             <div id="draft-quadrant-tech" class="kv-block"></div>
           </div>
+        </div>
+
+        <div class="draft-quadrant panel-card field-fill-card">
+          <div class="quadrant-label">卡片欄位填寫率</div>
+          <div id="field-fill-bars"></div>
         </div>
       </div>
     </section>
