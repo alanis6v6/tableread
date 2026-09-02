@@ -4,7 +4,7 @@
 
 **English speakers**: see [`docs/submission.md`](./docs/submission.md) for a full English write-up (the pain, why WebMCP, what's newly possible, implementation) — this README's body is otherwise in Traditional Chinese, the project's primary language.
 
-- **Live demo**: TODO（#6 部署完成後回填）
+- **Live demo**: https://alanis6v6.github.io/tableread/
 - **Demo 影片**: TODO（#10 完成後回填）
 
 ## Quick start
