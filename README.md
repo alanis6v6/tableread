@@ -2,6 +2,8 @@
 
 瀏覽器 Agent 協作的 SillyTavern 角色卡試玩平台 — 透過 [WebMCP](https://github.com/webmachinelearning/webmcp)（`document.modelContext.registerTool()`）把角色卡撰寫、世界書/正則腳本驗證、多輪試玩模擬、跨情境比較都變成可以直接被瀏覽器內 Agent（Chrome 149+ 內建、或 ChatGPT in-app browser）呼叫的工具，讓創作者跟 Agent 一起把一張 SillyTavern 角色卡從草稿寫到能上線的品質。
 
+**English speakers**: see [`docs/submission.md`](./docs/submission.md) for a full English write-up (the pain, why WebMCP, what's newly possible, implementation) — this README's body is otherwise in Traditional Chinese, the project's primary language.
+
 - **Live demo**: TODO（#6 部署完成後回填）
 - **Demo 影片**: TODO（#10 完成後回填）
 
