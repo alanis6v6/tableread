@@ -1,11 +1,15 @@
 // @ts-check
 import { defineConfig } from "@playwright/test";
 
-// The sandbox pre-installs Chromium at a fixed path instead of the revision
-// Playwright's own package expects; pointing executablePath there avoids an
-// attempted (and blocked) browser download. See scripts/dev-server.mjs for
-// why a plain static server (not a bundler) is enough here.
-const CHROMIUM_PATH = "/opt/pw-browsers/chromium";
+// Some sandboxes (this repo's own dev environment included) pre-install
+// Chromium at a fixed path instead of the revision Playwright's own package
+// expects, and block the attempted browser download outright. Point
+// executablePath there only when PW_CHROMIUM_PATH is set; everywhere else
+// (a contributor's machine, CI, a judge running `npx playwright test`)
+// leave it undefined so Playwright manages its own browser normally. See
+// scripts/dev-server.mjs for why a plain static server (not a bundler) is
+// enough here.
+const CHROMIUM_PATH = process.env.PW_CHROMIUM_PATH || undefined;
 
 export default defineConfig({
   testDir: "./test/e2e",
