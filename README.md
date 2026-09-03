@@ -28,7 +28,7 @@ npm run dev
 
 | 工具 | 說明 |
 | --- | --- |
-| `get_checklist_status` | 讀取角色卡草稿在七個豐富度面向＋MVU 決策上的完成狀態（純讀取） |
+| `get_checklist_status` | 讀取角色卡草稿在九個檢核面向（七個豐富度＋MVU 決策＋卡片美化方向）上的完成狀態；每個面向附「發想決策軸」與「產出落點」，讓 Agent 能從一段概述開始陪創作者發想缺口，不只是記錄決定（純讀取） |
 | `update_card_field` | 把一段內容或一個判斷結果寫進草稿狀態 |
 | `assemble_card` | 把目前草稿組裝成完整、符合 `chara_card_v3` 規格的角色卡 JSON |
 | `list_scenarios` | 列出目前可以拿來試玩的情境（`first_mes`／`alternate_greetings`／自訂情境） |

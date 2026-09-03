@@ -1,6 +1,7 @@
 // The single in-memory draft a creator-mode page is working on. Holds both
 // the card's actual content fields and the checklist judgment calls
-// (references/checklist.md's 7 aspects + the MVU decision), all written
+// (references/checklist.md's 7 aspects + the MVU decision + the beautify
+// direction), all written
 // through the one generic update_card_field(section, value) tool so the
 // calling agent has a single, uniform way to record progress.
 import { CHECKLIST_ASPECT_KEYS } from "./checklist.js";

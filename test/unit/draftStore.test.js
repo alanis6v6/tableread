@@ -5,7 +5,7 @@ import { createDraftStore } from "../../src/tools/draftStore.js";
 test("draftStore starts with every checklist aspect pending_ideation and empty fields", () => {
   const store = createDraftStore();
   const checklist = store.getChecklistStatus();
-  assert.equal(Object.keys(checklist).length, 8);
+  assert.equal(Object.keys(checklist).length, 9);
   for (const key of Object.keys(checklist)) {
     assert.deepEqual(checklist[key], { status: "pending_ideation", note: "" });
   }
