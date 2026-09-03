@@ -241,7 +241,7 @@ function getQaData(scenarioId) {
   const { fields } = draftStore.getSnapshot();
   const allComments = (fields.character_book_entries || []).map((e) => e.comment || `(id ${e.id})`);
   const neverTriggered = allComments.filter((c) => !triggeredComments.has(c));
-  const neverTriggeredText = allComments.length === 0 ? t("qa.noWorldbook") : neverTriggered.length ? neverTriggered.join("、") : t("qa.none");
+  const neverTriggeredText = allComments.length === 0 ? t("qa.noWorldbook") : neverTriggered.length ? neverTriggered.join(t("list.sep")) : t("qa.none");
 
   return {
     ok: true,
@@ -427,7 +427,7 @@ function renderCompareSummary() {
 
   if (result.world_entries_triggered_in_some.length > 0) {
     container.appendChild(
-      el("div", { class: "compare-alert", text: t("compare.inconsistent", result.world_entries_triggered_in_some.join("、")) }),
+      el("div", { class: "compare-alert", text: t("compare.inconsistent", result.world_entries_triggered_in_some.join(t("list.sep"))) }),
     );
   } else {
     container.appendChild(el("div", { class: "compare-alert compare-alert-ok", text: t("compare.consistent") }));
@@ -437,7 +437,7 @@ function renderCompareSummary() {
   const errorScenarios = result.scenarios.filter((s) => s.error);
   if (errorScenarios.length > 0) {
     container.appendChild(
-      el("div", { class: "hint", text: t("hint.cannotCompare", errorScenarios.map((s) => s.scenario_id).join("、")) }),
+      el("div", { class: "hint", text: t("hint.cannotCompare", errorScenarios.map((s) => s.scenario_id).join(t("list.sep"))) }),
     );
   }
 
