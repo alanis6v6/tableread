@@ -31,13 +31,13 @@ const FIELD_LABELS = {
 const DRAFT_LEFT_KEYS = ["name", "world_name", "description", "personality", "character_book_entries"];
 const DRAFT_RIGHT_KEYS = ["scenario", "first_mes", "mes_example", "alternate_greetings", "system_prompt", "creator_notes", "tags", "regex_scripts"];
 
-// Groups the 8 checklist aspects for the checklist-dialogue section. Order
+// Groups the 9 checklist aspects for the checklist-dialogue section. Order
 // matches CHECKLIST_ASPECTS exactly (see src/tools/checklist.js) -- this is
 // purely a presentation grouping, not a change to that data.
 const CHECKLIST_GROUPS = [
   { label: "角色核心", desc: "先把會反覆用到的人物、世界觀與關鍵事件釘住。", keys: ["cast", "world_rules", "special_events"] },
   { label: "情感與故事", desc: "確認情感／親密偏好、背景故事與 NPC 關係網。", keys: ["intimacy_preferences", "backstory", "npc_network"] },
-  { label: "技術設定", desc: "確認角色心理狀態進展脈絡，並決定要不要上 MVU 動態變量卡。", keys: ["psych_arc", "mvu"] },
+  { label: "技術設定", desc: "確認角色心理狀態進展脈絡、要不要上 MVU 動態變量卡，以及卡片美化方向。", keys: ["psych_arc", "mvu", "beautify"] },
 ];
 
 // Field-fill-rate grouping for the "卡片欄位填寫率" bars in the draft section.

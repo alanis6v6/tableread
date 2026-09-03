@@ -17,7 +17,7 @@ test("KPI strip lives outside the 4 snap-scrolled sections and starts at zero", 
   await expect(page.locator(".snap-section")).toHaveCount(4);
   await expect(page.locator("#kpi-strip .snap-section")).toHaveCount(0);
 
-  await expect(page.locator("#kpi-checklist-value")).toHaveText("0/8");
+  await expect(page.locator("#kpi-checklist-value")).toHaveText("0/9");
   await expect(page.locator("#kpi-rounds-value")).toHaveText("0");
   await expect(page.locator("#kpi-rounds-sub")).toHaveText("情境：（尚無情境）");
   await expect(page.locator("#kpi-worldbook-value")).toHaveText("0");
@@ -26,11 +26,11 @@ test("KPI strip lives outside the 4 snap-scrolled sections and starts at zero", 
 
 test("checklist KPI cell tracks the same known-count as the checklist section", async ({ page }) => {
   await callTool(page, "update_card_field", { section: "cast", value: { status: "known", note: "主角" } });
-  await expect(page.locator("#kpi-checklist-value")).toHaveText("1/8");
-  await expect(page.locator("#checklist-fraction")).toHaveText("1/8");
+  await expect(page.locator("#kpi-checklist-value")).toHaveText("1/9");
+  await expect(page.locator("#checklist-fraction")).toHaveText("1/9");
 
   const fillWidth = await page.locator("#kpi-checklist-fill").evaluate((el) => el.style.width);
-  expect(fillWidth).toBe("13%"); // round(1/8 * 100)
+  expect(fillWidth).toBe("11%"); // round(1/9 * 100)
 });
 
 test("rounds/world-book KPI cells update after running a scenario", async ({ page }) => {

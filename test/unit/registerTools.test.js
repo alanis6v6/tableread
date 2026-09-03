@@ -25,7 +25,18 @@ test("all 10 tools are defined with name/description/inputSchema/execute", () =>
   }
 });
 
-test("get_playtest_context has a real, non-empty description", () => {
+test("get_checklist_status carries per-aspect ideation guidance (axis + feeds) for all 9 aspects", async () => {
+  const tools = buildToolDefinitions();
+  const res = await call(byName(tools, "get_checklist_status"), {});
+  assert.equal(res.payload.aspects.length, 9);
+  for (const aspect of res.payload.aspects) {
+    assert.ok(aspect.axis && aspect.axis.length > 15, `${aspect.key} needs an ideation axis`);
+    assert.ok(aspect.feeds && aspect.feeds.length > 10, `${aspect.key} needs a feeds hint`);
+  }
+  assert.ok(res.payload.aspects.some((a) => a.key === "beautify"), "beautify aspect is present");
+});
+
+test("get_playtest_context's description states the 'only use what's listed' rule", () => {
   const tools = buildToolDefinitions();
   const t = byName(tools, "get_playtest_context");
   assert.equal(typeof t.description, "string");

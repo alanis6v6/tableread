@@ -57,7 +57,8 @@ export function buildToolDefinitions() {
   return [
     defineTool(
       "get_checklist_status",
-      "Reads the current draft character card's completion status across the seven richness aspects (cast / world-building rules / special events / emotional & intimacy preferences / backstory / NPC relationship network / psychological-state progression arc) plus the \"does this need an MVU dynamic-variable card\" decision (known / pending_confirm / pending_ideation). Read-only, does not modify anything. Call this once before asking the user the next question, so you don't re-ask something already known and don't skip an aspect still stuck at pending_ideation.",
+      "Reads the current draft character card's completion status across nine checklist aspects (known / pending_confirm / pending_ideation): the seven richness aspects (cast / world-building rules / special events / emotional & intimacy preferences / backstory / NPC relationship network / psychological-state progression arc) plus the \"does this need an MVU dynamic-variable card\" decision and the \"card-beautify direction\". Read-only, does not modify anything.\n\n" +
+        "This is the entry point for the \"ideate the whole card from a brief\" flow: the user usually starts with only a short world/character/backstory brief, and your job is to pick 1-2 pending_ideation aspects at a time and, using that aspect's `axis` from the returned `aspects[]` (proposed options should differ meaningfully along this axis), offer the user 2-3 concrete options to choose from; once they pick one, record it with update_card_field (flipping that aspect to known). `aspects[].feeds` tells you which card field or which kind of world-book entry the settled answer ultimately belongs in. Call this once before asking the user the next question or making a proposal, so you don't re-ask something already known and don't skip an aspect still stuck at pending_ideation.",
       { type: "object", properties: {}, additionalProperties: false },
       () => ({ ok: true, aspects: CHECKLIST_ASPECTS, checklist: draftStore.getChecklistStatus() }),
     ),
@@ -66,7 +67,7 @@ export function buildToolDefinitions() {
       "update_card_field",
       "Writes one piece of content or one judgment call into the draft state. Call this every time the user confirms a decision, or you've drafted a passage and gotten the user's approval on it — don't stockpile everything and write it all at once at the end." +
         " `section` must be one of two kinds:" +
-        ` (a) a checklist aspect key (${CHECKLIST_ASPECT_KEYS.join("/")}) — in which case \`value\` must be {status, note?}, recording the current judgment call for that aspect;` +
+        ` (a) a checklist aspect key (${CHECKLIST_ASPECT_KEYS.join("/")}) — in which case \`value\` must be {status, note?}, recording the current judgment call for that aspect; when ideation is settled and you're flipping status to known, \`note\` should be one sentence summarizing which option was chosen — never leave it blank;` +
         " (b) a card content field key — string fields: name/world_name/description/personality/scenario/first_mes/mes_example/system_prompt/creator_notes;" +
         " array fields: tags/alternate_greetings/character_book_entries/regex_scripts (character_book_entries follows chara_card_v3's character_book.entries[] schema, regex_scripts follows data.extensions.regex_scripts[] schema — both documented in reference/st-writer-src's card-format.md).",
       {

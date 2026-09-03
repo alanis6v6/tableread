@@ -42,7 +42,7 @@ test("draft edits, checklist updates, and activity log render live", async ({ pa
   await expect(firstRow.locator(".checklist-icon")).toHaveText("✅");
   await expect(firstRow.locator(".checklist-note")).toHaveText("主角＋馬提亞斯");
   await expect(firstRow).toHaveClass(/is-done/);
-  await expect(page.locator("#checklist-fraction")).toHaveText("1/8");
+  await expect(page.locator("#checklist-fraction")).toHaveText("1/9");
 
   await expect(page.locator("#activity-log .log-entry")).toHaveCount(2);
 });
