@@ -10,10 +10,11 @@
 <header class="topbar">
   <h1>tableread</h1>
   <div class="mode-switch" id="mode-switch">
-    <button type="button" class="mode-btn active" id="mode-btn-creator">創作者模式</button>
-    <button type="button" class="mode-btn" id="mode-btn-merchant">遊戲商模式（多情境比較）</button>
+    <button type="button" class="mode-btn active" id="mode-btn-creator" data-i18n="mode.creator">創作者模式</button>
+    <button type="button" class="mode-btn" id="mode-btn-merchant" data-i18n="mode.merchant">遊戲商模式（多情境比較）</button>
   </div>
-  <div id="webmcp-status" class="badge badge-pending">檢查 WebMCP 支援中…</div>
+  <button type="button" class="lang-btn" id="lang-toggle" aria-label="Switch language / 切換語言">EN</button>
+  <div id="webmcp-status" class="badge badge-pending" data-i18n="badge.checking">檢查 WebMCP 支援中…</div>
 </header>
 
 <main class="layout-1a" id="mode-creator">
@@ -22,24 +23,24 @@
 
       <div class="kpi-strip">
         <div class="kpi-cell" id="kpi-checklist">
-          <div class="kpi-label">檢核完成度</div>
+          <div class="kpi-label" data-i18n="kpi.checklist">檢核完成度</div>
           <div class="kpi-value" id="kpi-checklist-value">0/9</div>
           <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-checklist-fill"></div></div>
         </div>
         <div class="kpi-cell-split">
           <div class="kpi-cell" id="kpi-rounds">
-            <div class="kpi-label">已跑輪數</div>
+            <div class="kpi-label" data-i18n="kpi.rounds">已跑輪數</div>
             <div class="kpi-value" id="kpi-rounds-value">0</div>
-            <div class="kpi-sub" id="kpi-rounds-sub">情境：（尚無情境）</div>
+            <div class="kpi-sub" id="kpi-rounds-sub"></div>
           </div>
           <div class="kpi-cell" id="kpi-worldbook">
-            <div class="kpi-label">世界書條目</div>
+            <div class="kpi-label" data-i18n="kpi.worldbook">世界書條目</div>
             <div class="kpi-value" id="kpi-worldbook-value">0</div>
             <div class="kpi-sub" id="kpi-worldbook-sub"></div>
           </div>
         </div>
         <div class="kpi-cell" id="kpi-calls">
-          <div class="kpi-label">Agent 呼叫</div>
+          <div class="kpi-label" data-i18n="kpi.calls">Agent 呼叫</div>
           <div class="kpi-value" id="kpi-calls-value">0</div>
           <div class="kpi-sub" id="kpi-calls-sub"></div>
         </div>
@@ -47,22 +48,22 @@
 
       <div class="panels-1a">
         <section class="panel-1a" id="panel-draft-1a">
-          <h3>撰寫檢核表</h3>
+          <h3 data-i18n="panel.checklist">撰寫檢核表</h3>
           <div id="checklist-compact"></div>
-          <h3 class="panel-1a-subhead">卡片欄位填寫率</h3>
+          <h3 class="panel-1a-subhead" data-i18n="panel.fieldFill">卡片欄位填寫率</h3>
           <div id="field-fill-bars"></div>
         </section>
 
         <section class="panel-1a" id="panel-transcript-1a">
           <div class="panel-1a-head">
-            <h3>對話回放</h3>
+            <h3 data-i18n="panel.transcript">對話回放</h3>
             <select id="scenario-select"></select>
           </div>
           <div id="transcript"></div>
         </section>
 
         <section class="panel-1a" id="panel-qa-1a">
-          <h3>QA / Agent 活動</h3>
+          <h3 data-i18n="panel.qa">QA / Agent 活動</h3>
           <div id="qa-summary"></div>
           <div class="panel-1a-divider"></div>
           <div id="activity-log-compact"></div>
@@ -75,18 +76,18 @@
 
 <main class="layout hidden" id="mode-merchant">
   <section class="panel" id="panel-scenario-list">
-    <h2>情境清單管理</h2>
-    <p class="hint">勾選要拿去比較的情境，狀態欄顯示這個情境目前是否已經 run_scenario 過。</p>
+    <h2 data-i18n="panel.scenarioList">情境清單管理</h2>
+    <p class="hint" data-i18n="hint.scenarioListIntro">勾選要拿去比較的情境，狀態欄顯示這個情境目前是否已經 run_scenario 過。</p>
     <div id="scenario-list" class="scroll-list"></div>
   </section>
 
   <section class="panel panel-wide" id="panel-compare-cards">
-    <h2>多情境並排結果</h2>
+    <h2 data-i18n="panel.compareCards">多情境並排結果</h2>
     <div id="compare-cards" class="compare-cards"></div>
   </section>
 
   <section class="panel panel-wide" id="panel-compare-summary">
-    <h2>跨情境比較摘要</h2>
+    <h2 data-i18n="panel.compareSummary">跨情境比較摘要</h2>
     <div id="compare-summary"></div>
   </section>
 </main>

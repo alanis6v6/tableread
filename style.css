@@ -201,6 +201,18 @@ body {
 }
 .mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
+.lang-btn {
+  font-size: 12px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+}
+.lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+
 .hidden { display: none !important; }
 
 .scenario-row {

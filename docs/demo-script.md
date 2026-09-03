@@ -29,8 +29,8 @@ Marked **[HUMAN]** below wherever it can't be scripted from here.
 
 Flow A — the agent builds the card live, no console seeding on camera:
 
-1. Open the live URL in the Codex browser. Confirm the badge reads **"WebMCP 已註冊 N 個工具"** and the address-bar **Site tools → Available site tools** panel lists them.
-2. Have the **brief** ready to paste (see Part 1). Keep it to three sentences — world, character, backstory.
+1. Open the live URL **with `?lang=en`** (e.g. `https://alanis6v6.github.io/tableread/?lang=en`) in the Codex browser, so the whole UI and every tool description is in English for the judges. Confirm the badge reads **"WebMCP: N tools registered"** and the address-bar **Site tools → Available site tools** panel lists them.
+2. Have the **brief** ready to paste (see Part 1). A paragraph or two of premise is fine — the point is that it's *not* a finished design.
 3. Optional, so the checklist isn't a wall of ⬜ at the start: pre-answer **one** aspect (e.g. ask the agent once beforehand to set `cast` to known), then reset the rest. Not required.
 4. For the compare segment (Part 2), either pre-run two scenarios right before recording, or run them live if the pacing allows. A card with **one `constant: true` world-book entry and one keyword-gated entry** shows the "triggered in all / triggered in some" split clearly — the reference card at `reference/st-writer-src/cards/gender-is-not-the-limit/` already has both.
 
@@ -59,10 +59,18 @@ Flow A — the agent builds the card live, no console seeding on camera:
 
 ## 1:00–1:55 — With WebMCP · Part 1 — ideate a card from a brief
 
-**On screen**: creator mode. Paste the brief into the chat. The agent calls `get_checklist_status`; for each `pending_ideation` aspect it proposes two or three options; the creator picks; the agent calls `update_card_field`; the checklist strip fills in.
+**On screen**: creator mode. Paste the brief into the chat and let the agent drive — it calls `get_checklist_status`, reads each aspect's `axis`, and proposes two or three genuinely different directions per gap; the creator reacts; the agent calls `update_card_field`; the checklist strip fills in.
 
-**[HUMAN]** Brief to paste (example — swap in your own three sentences):
-> "世界觀：新竹老城區一棟日式老宅，九降風、木頭與曬過棉被的氣味。主角：二十三歲剛畢業、還住在家裡，該不該搬出去家裡沒人先提。背景：主角和屋裡另一個人之間有一段沒說開的關係。"
+**[HUMAN]** Brief to paste (example — a condensed premise, not a finished card):
+> Setting: a two-storey wooden house in Tainan, Taiwan, from the Japanese colonial era — a former Chinese-medicine shop, tatami rooms, the smell of old cypress and dried herbs, light filtered through paper screens.
+> Character: Li Yi — a cold, elegant ghost who has lingered about a hundred years. Died of the 1918 flu at twenty; a colonial-era sugar-trade heir and a prodigy of black magic. Sardonic and controlling on the surface, terrified of abandonment underneath.
+> Player: bound to him since age three by accidentally opening a red lacquer box — a ghost-marriage betrothal. Chronically feverish, because the "uncanny luck" he grants feeds on your life-force.
+> Hook: he treats you as an amusing "companion candidate," savouring the game rather than devouring you. His one hard limit is jealousy — it tips the story toward a bad end.
+
+**[HUMAN]** First prompt (keep it open — don't pre-decide anything):
+> "I want to build a SillyTavern character card from this premise. I haven't worked out the details — help me think it through. [brief] Use the page's tools to check what a card like this still needs, then walk me through the gaps a couple at a time. For each gap, tell me what the real decision is and give me two or three genuinely different directions to react to. Don't decide for me yet."
+
+**[HUMAN]** Then react on camera: pick one direction for a couple of aspects, hand the rest to the agent's judgment ("for the psych arc, you choose — go with whatever fits the tone, and tell me why"), and let it record and continue. Finish with: *"Fill in the rest with your best judgement, record them all, then draft the opening scene and one alternate greeting — write the card text in Traditional Chinese, that's the card's language."*
 
 **Narration** (over the calls firing):
 > "The creator gives three sentences. The agent calls `get_checklist_status` — the page hands back nine aspects a card needs, and for each one a *decision axis*: the thing a set of options should actually differ on. For 'world rules' that's architectural-vs-real and the recurring sensory anchor. The agent proposes concrete options along that axis; the creator picks one; `update_card_field` records it and the aspect turns green. The page owns the map of what's missing and where each answer lands in the card. The agent owns the judgment — turning a brief into real choices — which is the one part that isn't deterministic."
@@ -71,7 +79,7 @@ Flow A — the agent builds the card live, no console seeding on camera:
 
 ## 1:55–2:35 — With WebMCP · Part 2 — playtest + cross-scenario compare
 
-**On screen**: still creator mode. The agent calls `list_scenarios`, picks the `first_mes` scenario and one alternate greeting, and for each runs `run_scenario` → `get_playtest_context` → (writes the round) → `commit_playtest_round`. Then switch to **游戲商模式（多情境比較）** and run `compare_scenarios`.
+**On screen**: still creator mode. The agent calls `list_scenarios`, picks the `first_mes` scenario and one alternate greeting, and for each runs `run_scenario` → `get_playtest_context` → (writes the round) → `commit_playtest_round`. Then click the **Game-publisher mode** button in the header and run `compare_scenarios`.
 
 **Narration**:
 > "Now playtest it. `run_scenario` starts a session; `get_playtest_context` returns exactly which world-book entries are live *this round* and why — keyword match, constant, still in cooldown — computed by the page, not remembered by the model. The agent writes the character's turn using only what's listed; `commit_playtest_round` applies the regex scripts and the variable patch, deterministically, and reports any warning honestly. Run a second scenario, then switch to publisher mode: `compare_scenarios` is read-only — it takes the runs that already happened and flags which entries fired in *all* of them versus only *some*. That inconsistency is the QA signal a publisher actually needs, and nothing working from the rendered page can compute it."
