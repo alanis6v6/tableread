@@ -23,7 +23,7 @@ Marked **[HUMAN]** below wherever it can't be scripted from here.
 - Add burned-in or YouTube captions before publishing (hard requirement, not optional).
 - Upload as **Public** (not Unlisted — Devpost needs the judge to open it with no auth), then fill the URL into README's `Demo 影片` line and this doc's **Video** line below.
 
-**Video**: https://youtu.be/REPLACE_WITH_VIDEO_ID
+**Video**: https://youtu.be/QgMt0yT2CeI
 
 ## Setup before hitting record  [HUMAN]
 

@@ -5,7 +5,7 @@
 - Repository: https://github.com/alanis6v6/tableread
 - License: MIT
 - Live demo: https://alanis6v6.github.io/tableread/
-- Demo video: https://youtu.be/REPLACE_WITH_VIDEO_ID
+- Demo video: https://youtu.be/QgMt0yT2CeI
 
 ## The pain
 
