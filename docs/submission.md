@@ -5,7 +5,7 @@
 - Repository: https://github.com/alanis6v6/tableread
 - License: MIT
 - Live demo: https://alanis6v6.github.io/tableread/
-- Demo video: TODO (filled in once [#10](https://github.com/alanis6v6/tableread/issues/10) is recorded)
+- Demo video: https://youtu.be/REPLACE_WITH_VIDEO_ID
 
 ## The pain
 
