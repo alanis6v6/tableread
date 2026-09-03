@@ -57,7 +57,8 @@ export function buildToolDefinitions() {
   return [
     defineTool(
       "get_checklist_status",
-      "讀取目前角色卡草稿在七個豐富度面向（登場人物/世界觀規則/特殊事件/情感親密偏好/背景故事/NPC關係網/心理狀態進展脈絡）加上「是否需要MVU動態變量卡」這項決策上的完成狀態（known=已知/pending_confirm=待確認/pending_ideation=待發想）。純讀取，不修改任何東西。建議在每次要向使用者提出下一個問題之前先呼叫一次，確保不會重複問已經 known 的項目，也不會漏掉還沒討論到（pending_ideation）的面向。",
+      "讀取角色卡草稿在九個檢核面向上的完成狀態（known=已知/pending_confirm=待確認/pending_ideation=待發想）：七個豐富度面向（登場人物/世界觀規則/特殊事件/情感親密偏好/背景故事/NPC關係網/心理狀態進展脈絡）＋「是否需要MVU動態變量卡」＋「卡片美化方向」。純讀取，不修改任何東西。\n\n" +
+        "這是「從一段概述開始發想整張卡」流程的起點：使用者通常一開始只會給一段簡短的世界觀／登場人物／背景故事概述，你的工作是照這份狀態，一次挑 1-2 個 pending_ideation 的面向，依回傳 aspects[] 裡該面向的 axis（發想時提出的方案要在這條決策軸上有實質差異）給使用者 2-3 個具體方案挑，選定後用 update_card_field 把方向記進去（該面向轉 known）。aspects[].feeds 說明這個面向最後會寫進卡片的哪個欄位／哪種世界書條目。每次要向使用者提問或提案前都先呼叫一次，避免重複問已經 known 的、或漏掉還沒碰的面向。",
       { type: "object", properties: {}, additionalProperties: false },
       () => ({ ok: true, aspects: CHECKLIST_ASPECTS, checklist: draftStore.getChecklistStatus() }),
     ),
@@ -66,7 +67,7 @@ export function buildToolDefinitions() {
       "update_card_field",
       "把一段內容或一個判斷結果寫進草稿狀態。每次使用者確認了一個決定、或你擴寫出一段內容並得到使用者認可後就呼叫一次，不要囤積到最後才一次寫入。" +
         " section 只能是以下兩類之一：" +
-        ` (a) 檢核表面向 key（${CHECKLIST_ASPECT_KEYS.join("/")}）——此時 value 必須是 {status, note?}，用來記錄這個面向目前的判斷結果；` +
+        ` (a) 檢核表面向 key（${CHECKLIST_ASPECT_KEYS.join("/")}）——此時 value 必須是 {status, note?}，用來記錄這個面向目前的判斷結果；發想完成、要把 status 設成 known 時，note 請寫一句選定方向的摘要（採用了哪個方案），不要留空；` +
         " (b) 卡片內容欄位 key —— 字串欄位：name/world_name/description/personality/scenario/first_mes/mes_example/system_prompt/creator_notes；" +
         " 陣列欄位：tags/alternate_greetings/character_book_entries/regex_scripts（character_book_entries 依 chara_card_v3 的 character_book.entries[] schema，regex_scripts 依 data.extensions.regex_scripts[] schema，兩者皆可參考 reference/st-writer-src 的 card-format.md）。",
       {
