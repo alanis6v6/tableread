@@ -1,8 +1,8 @@
 # tableread
 
-瀏覽器 Agent 協作的 SillyTavern 角色卡試玩平台 — 透過 [WebMCP](https://github.com/webmachinelearning/webmcp)（`document.modelContext.registerTool()`）把角色卡撰寫、世界書/正則腳本驗證、多輪試玩模擬、跨情境比較都變成可以直接被瀏覽器內 Agent（Chrome 149+ 內建、或 ChatGPT in-app browser）呼叫的工具，讓創作者跟 Agent 一起把一張 SillyTavern 角色卡從草稿寫到能上線的品質。
+瀏覽器 Agent 協作的 SillyTavern 角色卡試玩平台 — 透過 [WebMCP](https://github.com/webmachinelearning/webmcp)（`document.modelContext.registerTool()`）把角色卡撰寫、世界書/正則腳本驗證、多輪試玩模擬、跨情境比較都變成可以直接被瀏覽器內 Agent（Chrome 149+ 內建、或 Codex 瀏覽器）呼叫的工具，讓創作者跟 Agent 一起把一張 SillyTavern 角色卡從草稿寫到能上線的品質。
 
-**English speakers**: see [`docs/submission.md`](./docs/submission.md) for a full English write-up (the pain, why WebMCP, what's newly possible, implementation) — this README's body is otherwise in Traditional Chinese, the project's primary language.
+**English speakers**: see [`docs/submission.md`](./docs/submission.md) for a full English write-up (the pain, why WebMCP, what's newly possible, implementation) — this README's body is otherwise in Traditional Chinese, the project's primary language. The app itself has a 中/EN toggle (or open it with `?lang=en`); the WebMCP tool descriptions follow it, so the agent reads whichever language you're working in.
 
 - **Live demo**: https://alanis6v6.github.io/tableread/
 - **Demo 影片**: TODO（#10 完成後回填）
@@ -19,7 +19,7 @@ npm run dev
 ## WebMCP 需求
 
 - **Chrome 149+**，並開啟 `chrome://flags/#enable-webmcp-testing`
-- 或使用 **ChatGPT in-app browser**
+- 或使用 **Codex 瀏覽器**（ChatGPT Work / Codex，模型 GPT-5.6 Sol 或 Terra；一般 ChatGPT Plus 的 agent 端目前拿不到 site tools）
 - `document.modelContext` 需要 secure context：`http://localhost` 本身就算，但**正式部署後需要 HTTPS**（見 [#6](https://github.com/alanis6v6/tableread/issues/6)）
 
 沒有支援 WebMCP 的環境仍可開啟頁面看 UI，但 Agent 呼叫的十個工具不會被註冊。

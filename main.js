@@ -6,7 +6,8 @@ import {
   activityLog,
   compareScenariosLogic,
 } from "./src/tools/registerTools.js";
-import { CHECKLIST_ASPECTS, CHECKLIST_STATUS_ICON } from "./src/tools/checklist.js";
+import { getLocalizedAspects, CHECKLIST_STATUS_ICON } from "./src/tools/checklist.js";
+import { t, getLang, setLang, otherLang } from "./src/i18n.js";
 
 // Field-fill-rate grouping for the creator-mode KPI dashboard (option 1a).
 // "必填" is the minimum set a card needs to actually run in SillyTavern;
@@ -40,28 +41,16 @@ function el(tag, props = {}, children = []) {
 // ---- WebMCP registration ------------------------------------------------
 
 const STATUS_BADGE = {
-  ok: { className: "badge-ok", text: (r) => `WebMCP 已註冊 ${r.registered.length} 個工具` },
-  partial: {
-    className: "badge-warn",
-    text: (r) => `WebMCP 註冊部分失敗：成功 ${r.registered.length}/${r.tools.length} 個（詳見主控台）`,
-  },
-  error: {
-    className: "badge-fail",
-    text: (r) => `WebMCP 註冊全部失敗（${r.tools.length} 個工具皆失敗，詳見主控台）`,
-  },
-  timeout: {
-    className: "badge-fail",
-    text: () => "WebMCP 註冊逾時，可能是實驗性 API 尚未完全支援",
-  },
-  unsupported: {
-    className: "badge-fail",
-    text: () => "此瀏覽器/情境不支援 document.modelContext（需要 secure context，localhost 開發即可）",
-  },
+  ok: { className: "badge-ok", text: (r) => t("badge.ok", r.registered.length) },
+  partial: { className: "badge-warn", text: (r) => t("badge.partial", r.registered.length, r.tools.length) },
+  error: { className: "badge-fail", text: (r) => t("badge.error", r.tools.length) },
+  timeout: { className: "badge-fail", text: () => t("badge.timeout") },
+  unsupported: { className: "badge-fail", text: () => t("badge.unsupported") },
 };
 
 async function boot() {
   const badge = document.getElementById("webmcp-status");
-  const result = await registerAllTools();
+  const result = await registerAllTools({ lang: getLang() });
 
   const spec = STATUS_BADGE[result.status] ?? STATUS_BADGE.error;
   badge.textContent = spec.text(result);
@@ -80,7 +69,7 @@ async function boot() {
   window.__tableread.tools = result.tools;
 }
 
-// ---- Panel: 撰寫檢核表 + 卡片欄位填寫率 -----------------------------------
+// ---- Panel: writing checklist + card-field fill rate ---------------------
 // Compact by design (option 1a's "reduce clutter" goal) -- just icon + label,
 // no per-item notes; the fuller checklist detail still lives in the raw
 // draftStore state (window.__tableread.draftStore) for anyone who needs it.
@@ -89,7 +78,7 @@ function renderChecklistCompact() {
   const container = document.getElementById("checklist-compact");
   const checklist = draftStore.getChecklistStatus();
   container.innerHTML = "";
-  for (const aspect of CHECKLIST_ASPECTS) {
+  for (const aspect of getLocalizedAspects(getLang())) {
     const entry = checklist[aspect.key] ?? { status: "pending_ideation" };
     container.appendChild(
       el("div", { class: "checklist-compact-row" }, [
@@ -138,10 +127,10 @@ function renderFieldFillBars() {
   const container = document.getElementById("field-fill-bars");
   const { fields } = draftStore.getSnapshot();
   const bars = [
-    { label: "必填欄位", pct: pctFilledScalar(REQUIRED_FIELD_KEYS, fields) },
-    { label: "選填欄位", pct: pctFilledMixed(OPTIONAL_SCALAR_KEYS, OPTIONAL_ARRAY_KEYS, fields) },
-    { label: "世界書", pct: worldbookFillPct(fields.character_book_entries) },
-    { label: "regex 腳本", pct: regexFillPct(fields.regex_scripts) },
+    { label: t("bar.required"), pct: pctFilledScalar(REQUIRED_FIELD_KEYS, fields) },
+    { label: t("bar.optional"), pct: pctFilledMixed(OPTIONAL_SCALAR_KEYS, OPTIONAL_ARRAY_KEYS, fields) },
+    { label: t("bar.worldbook"), pct: worldbookFillPct(fields.character_book_entries) },
+    { label: t("bar.regex"), pct: regexFillPct(fields.regex_scripts) },
   ];
   container.innerHTML = "";
   for (const bar of bars) {
@@ -159,7 +148,7 @@ function renderFieldFillBars() {
   }
 }
 
-// ---- Panel: QA / Agent 活動 (compact) -------------------------------------
+// ---- Panel: QA / Agent activity (compact) -------------------------------
 // Same activity feed as before, just rendered compact (tool name + time,
 // error rows in red) to match option 1a's density; click a row to expand its
 // full args/result JSON in place, so the "verify tool calls" use case from
@@ -176,7 +165,7 @@ function renderActivityLogCompact() {
   const entries = activityLog.getEntries();
   container.innerHTML = "";
   if (entries.length === 0) {
-    container.appendChild(el("div", { class: "hint", text: "尚未有任何工具呼叫。" }));
+    container.appendChild(el("div", { class: "hint", text: t("hint.noActivity") }));
     return;
   }
   for (const entry of entries.slice().reverse()) {
@@ -204,7 +193,7 @@ function renderActivityLogCompact() {
   }
 }
 
-// ---- Panel: 自動測卡（對話回放 + QA 摘要） --------------------------------
+// ---- Panel: auto card-test (transcript replay + QA summary) -------------
 
 function currentScenarioIds() {
   const listed = scenarioStore.listScenarios().map((s) => s.id);
@@ -218,7 +207,7 @@ function renderScenarioSelect() {
   const previous = select.value;
   select.innerHTML = "";
   if (ids.length === 0) {
-    select.appendChild(el("option", { text: "（尚無情境）", value: "" }));
+    select.appendChild(el("option", { text: t("select.noScenarios"), value: "" }));
     select.disabled = true;
     return;
   }
@@ -252,7 +241,7 @@ function getQaData(scenarioId) {
   const { fields } = draftStore.getSnapshot();
   const allComments = (fields.character_book_entries || []).map((e) => e.comment || `(id ${e.id})`);
   const neverTriggered = allComments.filter((c) => !triggeredComments.has(c));
-  const neverTriggeredText = allComments.length === 0 ? "（尚無世界書條目）" : neverTriggered.length ? neverTriggered.join("、") : "無";
+  const neverTriggeredText = allComments.length === 0 ? t("qa.noWorldbook") : neverTriggered.length ? neverTriggered.join("、") : t("qa.none");
 
   return {
     ok: true,
@@ -273,7 +262,7 @@ function renderAutotest() {
   const qaEl = document.getElementById("qa-summary");
 
   if (!scenarioId) {
-    transcriptEl.innerHTML = '<div class="hint">選一個已經 run_scenario 過的情境來查看回放。</div>';
+    transcriptEl.innerHTML = `<div class="hint">${escapeHtml(t("hint.pickScenario"))}</div>`;
     qaEl.innerHTML = "";
     return;
   }
@@ -288,7 +277,7 @@ function renderAutotest() {
   transcriptEl.innerHTML = "";
   for (const round of qa.rounds) {
     const block = el("div", { class: "round-block" });
-    block.appendChild(el("div", { class: "round-label", text: `第 ${round.round} 頁` }));
+    block.appendChild(el("div", { class: "round-label", text: t("round.page", round.round) }));
     if (round.player_raw !== null) {
       block.appendChild(el("div", { class: "bubble-player", text: round.player_raw }));
     }
@@ -297,22 +286,22 @@ function renderAutotest() {
   }
 
   qaEl.innerHTML = "";
-  qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: "已跑輪數" }), el("span", { text: String(qa.totalRounds) })]));
+  qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: t("qa.rounds") }), el("span", { text: String(qa.totalRounds) })]));
   qaEl.appendChild(
-    el("div", { class: "qa-row" }, [el("span", { text: "JSON Patch 缺失次數" }), el("span", { text: String(qa.patchMisses) })]),
+    el("div", { class: "qa-row" }, [el("span", { text: t("qa.patchMisses") }), el("span", { text: String(qa.patchMisses) })]),
   );
   qaEl.appendChild(
     el("div", { class: "qa-row" }, [
-      el("span", { text: "從未觸發的世界書條目" }),
+      el("span", { text: t("qa.neverTriggered") }),
       el("span", { text: qa.neverTriggeredText }),
     ]),
   );
   if (qa.warnings.length === 0) {
-    qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: "regex/patch 警告" }), el("span", { text: "無" })]));
+    qaEl.appendChild(el("div", { class: "qa-row" }, [el("span", { text: t("qa.warnings") }), el("span", { text: t("qa.none") })]));
   } else {
     for (const w of qa.warnings) {
       qaEl.appendChild(
-        el("div", { class: "qa-row qa-warning" }, [el("span", { text: `第 ${w.round} 頁` }), el("span", { text: w.warning })]),
+        el("div", { class: "qa-row qa-warning" }, [el("span", { text: t("round.page", w.round) }), el("span", { text: w.warning })]),
       );
     }
   }
@@ -324,32 +313,33 @@ function renderAutotest() {
 // warning, and total agent tool calls + error count.
 
 function renderKpis() {
+  const aspects = getLocalizedAspects(getLang());
   const checklist = draftStore.getChecklistStatus();
-  const knownCount = CHECKLIST_ASPECTS.filter((a) => checklist[a.key]?.status === "known").length;
-  document.getElementById("kpi-checklist-value").textContent = `${knownCount}/${CHECKLIST_ASPECTS.length}`;
-  document.getElementById("kpi-checklist-fill").style.width = `${Math.round((knownCount / CHECKLIST_ASPECTS.length) * 100)}%`;
+  const knownCount = aspects.filter((a) => checklist[a.key]?.status === "known").length;
+  document.getElementById("kpi-checklist-value").textContent = `${knownCount}/${aspects.length}`;
+  document.getElementById("kpi-checklist-fill").style.width = `${Math.round((knownCount / aspects.length) * 100)}%`;
 
   const scenarioId = document.getElementById("scenario-select").value;
   const qa = getQaData(scenarioId);
   document.getElementById("kpi-rounds-value").textContent = String(qa.totalRounds);
-  document.getElementById("kpi-rounds-sub").textContent = scenarioId ? `情境：${scenarioId}` : "情境：（尚無情境）";
+  document.getElementById("kpi-rounds-sub").textContent = scenarioId ? t("kpi.rounds.scenario", scenarioId) : t("kpi.rounds.none");
 
   const { fields } = draftStore.getSnapshot();
   const entries = fields.character_book_entries || [];
   document.getElementById("kpi-worldbook-value").textContent = String(entries.length);
   const wbSub = document.getElementById("kpi-worldbook-sub");
-  wbSub.textContent = qa.neverTriggeredCount > 0 ? `${qa.neverTriggeredCount} 條從未觸發` : entries.length > 0 ? "已全數觸發" : "";
+  wbSub.textContent = qa.neverTriggeredCount > 0 ? t("kpi.worldbook.never", qa.neverTriggeredCount) : entries.length > 0 ? t("kpi.worldbook.allTriggered") : "";
   wbSub.classList.toggle("kpi-sub-warn", qa.neverTriggeredCount > 0);
 
   const logEntries = activityLog.getEntries();
   const errorCount = logEntries.filter((e) => e.result && e.result.ok === false).length;
   document.getElementById("kpi-calls-value").textContent = String(logEntries.length);
   const callsSub = document.getElementById("kpi-calls-sub");
-  callsSub.textContent = errorCount > 0 ? `${errorCount} 次錯誤` : logEntries.length > 0 ? "無錯誤" : "";
+  callsSub.textContent = errorCount > 0 ? t("kpi.calls.errors", errorCount) : logEntries.length > 0 ? t("kpi.calls.noErrors") : "";
   callsSub.classList.toggle("kpi-sub-warn", errorCount > 0);
 }
 
-// ---- Panel: 遊戲商模式（多情境比較） --------------------------------------
+// ---- Panel: game-publisher mode (multi-scenario compare) ----------------
 // Same draftStore/scenarioStore/sessionRegistry/activityLog as creator mode --
 // this is a second set of panels reading the same in-memory stores, not a
 // second page (a second HTML document would reset all that in-memory state
@@ -362,9 +352,7 @@ function renderScenarioList() {
   const ids = currentScenarioIds();
   container.innerHTML = "";
   if (ids.length === 0) {
-    container.appendChild(
-      el("div", { class: "hint", text: "（尚無情境，先在創作者模式寫 first_mes，或呼叫 add_scenario。）" }),
-    );
+    container.appendChild(el("div", { class: "hint", text: t("hint.noScenariosMerchant") }));
     return;
   }
   for (const id of ids) {
@@ -372,8 +360,8 @@ function renderScenarioList() {
     const label = scenario ? scenario.label : id;
     const transcript = sessionRegistry.getTranscript(id);
     const status = transcript.ok
-      ? `已執行 ${transcript.rounds.filter((r) => r.round > 0).length} 輪`
-      : "尚未執行";
+      ? t("scenario.ran", transcript.rounds.filter((r) => r.round > 0).length)
+      : t("scenario.notRun");
 
     const checkbox = el("input", { type: "checkbox" });
     checkbox.checked = compareSelected.has(id);
@@ -387,7 +375,7 @@ function renderScenarioList() {
     container.appendChild(
       el("label", { class: "scenario-row" }, [
         checkbox,
-        el("span", { class: "scenario-label", text: `${label}（${id}）` }),
+        el("span", { class: "scenario-label", text: t("scenario.rowLabel", label, id) }),
         el("span", { class: "scenario-status", text: status }),
       ]),
     );
@@ -399,13 +387,13 @@ function renderCompareCards() {
   container.innerHTML = "";
   const ids = [...compareSelected];
   if (ids.length === 0) {
-    container.appendChild(el("div", { class: "hint", text: "在左邊「情境清單管理」勾選至少一個情境來並排比較。" }));
+    container.appendChild(el("div", { class: "hint", text: t("hint.pickToCompare") }));
     return;
   }
   for (const id of ids) {
     const scenario = scenarioStore.findScenario(id);
     const label = scenario ? scenario.label : id;
-    const card = el("div", { class: "compare-card" }, [el("h4", { text: `${label}（${id}）` })]);
+    const card = el("div", { class: "compare-card" }, [el("h4", { text: t("scenario.rowLabel", label, id) })]);
 
     // Same source as renderAutotest(): sessionRegistry.getTranscript(id).
     const transcript = sessionRegistry.getTranscript(id);
@@ -416,9 +404,9 @@ function renderCompareCards() {
     }
 
     const lastRound = transcript.rounds[transcript.rounds.length - 1];
-    card.appendChild(el("div", { class: "round-label", text: `第 ${lastRound.round} 頁角色回應片段` }));
+    card.appendChild(el("div", { class: "round-label", text: t("round.charFragment", lastRound.round) }));
     card.appendChild(el("div", { class: "compare-char", html: lastRound.char_html }));
-    card.appendChild(el("h4", { text: "目前變量" }));
+    card.appendChild(el("h4", { text: t("compare.currentVars") }));
     card.appendChild(el("pre", { class: "compare-vars", text: JSON.stringify(lastRound.vars_snapshot, null, 2) }));
     container.appendChild(card);
   }
@@ -429,7 +417,7 @@ function renderCompareSummary() {
   container.innerHTML = "";
   const ids = [...compareSelected];
   if (ids.length === 0) {
-    container.appendChild(el("div", { class: "hint", text: "勾選情境後才能算跨情境比較摘要。" }));
+    container.appendChild(el("div", { class: "hint", text: t("hint.pickForSummary") }));
     return;
   }
 
@@ -439,22 +427,17 @@ function renderCompareSummary() {
 
   if (result.world_entries_triggered_in_some.length > 0) {
     container.appendChild(
-      el("div", {
-        class: "compare-alert",
-        text: `⚠ 觸發不一致的世界書條目（部分情境觸發、部分沒有，QA 重點）：${result.world_entries_triggered_in_some.join("、")}`,
-      }),
+      el("div", { class: "compare-alert", text: t("compare.inconsistent", result.world_entries_triggered_in_some.join("、")) }),
     );
   } else {
-    container.appendChild(
-      el("div", { class: "compare-alert compare-alert-ok", text: "沒有偵測到跨情境觸發不一致的世界書條目。" }),
-    );
+    container.appendChild(el("div", { class: "compare-alert compare-alert-ok", text: t("compare.consistent") }));
   }
 
   const okScenarios = result.scenarios.filter((s) => !s.error);
   const errorScenarios = result.scenarios.filter((s) => s.error);
   if (errorScenarios.length > 0) {
     container.appendChild(
-      el("div", { class: "hint", text: `尚未執行、無法比較：${errorScenarios.map((s) => s.scenario_id).join("、")}` }),
+      el("div", { class: "hint", text: t("hint.cannotCompare", errorScenarios.map((s) => s.scenario_id).join("、")) }),
     );
   }
 
@@ -463,13 +446,13 @@ function renderCompareSummary() {
     const table = el("table", { class: "compare-table" });
     table.appendChild(
       el("thead", {}, [
-        el("tr", {}, [el("th", { text: "變量" }), ...okScenarios.map((s) => el("th", { text: s.label }))]),
+        el("tr", {}, [el("th", { text: t("compare.varsHeader") }), ...okScenarios.map((s) => el("th", { text: s.label }))]),
       ]),
     );
     const tbody = el("tbody");
     if (varKeys.length === 0) {
       tbody.appendChild(
-        el("tr", {}, [el("td", { text: "（尚無變量）", colspan: String(okScenarios.length + 1) })]),
+        el("tr", {}, [el("td", { text: t("compare.noVars"), colspan: String(okScenarios.length + 1) })]),
       );
     }
     for (const key of varKeys) {
@@ -482,6 +465,21 @@ function renderCompareSummary() {
     }
     table.appendChild(tbody);
     container.appendChild(table);
+  }
+}
+
+// ---- Static chrome text (localised) ------------------------------------
+
+function applyStaticText() {
+  for (const node of document.querySelectorAll("[data-i18n]")) {
+    node.textContent = t(node.dataset.i18n);
+  }
+  const langBtn = document.getElementById("lang-toggle");
+  if (langBtn) langBtn.textContent = t("lang.toggleLabel");
+  try {
+    document.documentElement.lang = getLang() === "en" ? "en" : "zh-Hant";
+  } catch {
+    /* noop */
   }
 }
 
@@ -506,7 +504,7 @@ document.getElementById("scenario-select").addEventListener("change", () => {
   renderKpis();
 });
 
-// ---- Mode switch (創作者模式 / 遊戲商模式) ---------------------------------
+// ---- Mode switch (creator / game-publisher) ----------------------------
 // Both modes are panels within this one page sharing the same WebMCP tool
 // registration and the same draftStore/scenarioStore/sessionRegistry state --
 // a separate HTML page would reset all of that on navigation.
@@ -526,7 +524,23 @@ function setMode(mode) {
 modeBtnCreator.addEventListener("click", () => setMode("creator"));
 modeBtnMerchant.addEventListener("click", () => setMode("merchant"));
 
+// ---- Language toggle --------------------------------------------------
+// Re-registers the WebMCP tools in the chosen language and re-renders. For
+// the demo, opening the page with ?lang=en registers in English once at
+// boot, so this toggle is a convenience, not the critical path.
+
+const langToggle = document.getElementById("lang-toggle");
+if (langToggle) {
+  langToggle.addEventListener("click", async () => {
+    setLang(otherLang());
+    applyStaticText();
+    renderAll();
+    await boot();
+  });
+}
+
 window.__tableread = { draftStore, scenarioStore, sessionRegistry, activityLog, compareScenariosLogic };
 
+applyStaticText();
 boot();
 renderAll();

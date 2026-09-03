@@ -42,6 +42,28 @@ test("get_playtest_context's description states the 'only use what's listed' rul
   assert.match(t.description, /只能使用這份輸出/);
 });
 
+test("buildToolDefinitions('en') returns English descriptions and English aspect guidance", async () => {
+  const tools = buildToolDefinitions("en");
+  assert.equal(tools.length, 10);
+  assert.match(byName(tools, "get_checklist_status").description, /nine checklist aspects/i);
+  assert.match(byName(tools, "get_playtest_context").description, /Only use the world-book content/i);
+  assert.doesNotMatch(byName(tools, "run_scenario").description, /[一-鿿]/);
+
+  const res = await call(byName(tools, "get_checklist_status"), {});
+  assert.equal(res.payload.aspects.length, 9);
+  const beautify = res.payload.aspects.find((a) => a.key === "beautify");
+  assert.equal(beautify.label, "Card-beautify direction (status bar / visual style)");
+  assert.doesNotMatch(beautify.axis, /[一-鿿]/);
+});
+
+test("update_card_field description lists the checklist aspect keys in both languages", () => {
+  for (const lang of ["zh", "en"]) {
+    const t = byName(buildToolDefinitions(lang), "update_card_field");
+    assert.match(t.description, /cast\/world_rules/);
+    assert.match(t.description, /beautify/);
+  }
+});
+
 test("end-to-end: draft a tiny card, run a scenario, commit a round, read the transcript", async () => {
   const tools = buildToolDefinitions();
 
