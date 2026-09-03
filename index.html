@@ -7,89 +7,158 @@
 <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-<header class="topbar">
-  <h1>tableread</h1>
-  <div class="mode-switch" id="mode-switch">
-    <button type="button" class="mode-btn active" id="mode-btn-creator">創作者模式</button>
-    <button type="button" class="mode-btn" id="mode-btn-merchant">遊戲商模式（多情境比較）</button>
-  </div>
-  <div id="webmcp-status" class="badge badge-pending">檢查 WebMCP 支援中…</div>
-</header>
 
-<main class="layout-1a" id="mode-creator">
-  <div class="dashboard-1a">
-    <div class="dashboard-1a-inner">
+<div id="webmcp-status" class="badge badge-pending status-float">檢查 WebMCP 支援中…</div>
 
-      <div class="kpi-strip">
-        <div class="kpi-cell" id="kpi-checklist">
-          <div class="kpi-label">檢核完成度</div>
-          <div class="kpi-value" id="kpi-checklist-value">0/9</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-checklist-fill"></div></div>
-        </div>
-        <div class="kpi-cell-split">
-          <div class="kpi-cell" id="kpi-rounds">
-            <div class="kpi-label">已跑輪數</div>
-            <div class="kpi-value" id="kpi-rounds-value">0</div>
-            <div class="kpi-sub" id="kpi-rounds-sub">情境：（尚無情境）</div>
-          </div>
-          <div class="kpi-cell" id="kpi-worldbook">
-            <div class="kpi-label">世界書條目</div>
-            <div class="kpi-value" id="kpi-worldbook-value">0</div>
-            <div class="kpi-sub" id="kpi-worldbook-sub"></div>
-          </div>
-        </div>
-        <div class="kpi-cell" id="kpi-calls">
-          <div class="kpi-label">Agent 呼叫</div>
-          <div class="kpi-value" id="kpi-calls-value">0</div>
-          <div class="kpi-sub" id="kpi-calls-sub"></div>
-        </div>
+<aside id="taskbar" class="taskbar collapsed">
+  <button type="button" id="taskbar-toggle" class="taskbar-toggle">☰ 任務</button>
+  <div class="taskbar-body">
+    <div class="mode-switch" id="mode-switch">
+      <button type="button" class="mode-pill active" id="mode-btn-creator">創作者</button>
+      <button type="button" class="mode-pill" id="mode-btn-merchant">遊戲商</button>
+    </div>
+    <div class="taskbar-scenarios">
+      <div class="taskbar-label">
+        <span class="label-zh">情境庫</span>
+        <span class="label-en">SCENARIOS</span>
       </div>
-
-      <div class="panels-1a">
-        <section class="panel-1a" id="panel-draft-1a">
-          <h3>撰寫檢核表</h3>
-          <div id="checklist-compact"></div>
-          <h3 class="panel-1a-subhead">卡片欄位填寫率</h3>
-          <div id="field-fill-bars"></div>
-        </section>
-
-        <section class="panel-1a" id="panel-transcript-1a">
-          <div class="panel-1a-head">
-            <h3>對話回放</h3>
-            <select id="scenario-select"></select>
-          </div>
-          <div id="transcript"></div>
-        </section>
-
-        <section class="panel-1a" id="panel-qa-1a">
-          <h3>QA / Agent 活動</h3>
-          <div id="qa-summary"></div>
-          <div class="panel-1a-divider"></div>
-          <div id="activity-log-compact"></div>
-        </section>
-      </div>
-
+      <div id="taskbar-scenario-list" class="scenario-nav-list"></div>
     </div>
   </div>
-</main>
+</aside>
 
-<main class="layout hidden" id="mode-merchant">
-  <section class="panel" id="panel-scenario-list">
-    <h2>情境清單管理</h2>
-    <p class="hint">勾選要拿去比較的情境，狀態欄顯示這個情境目前是否已經 run_scenario 過。</p>
-    <div id="scenario-list" class="scroll-list"></div>
-  </section>
+<div id="content-wrap" class="content-wrap">
 
-  <section class="panel panel-wide" id="panel-compare-cards">
-    <h2>多情境並排結果</h2>
-    <div id="compare-cards" class="compare-cards"></div>
-  </section>
+  <div class="kpi-strip" id="kpi-strip">
+    <div class="kpi-cell" id="kpi-checklist">
+      <span class="kpi-label">檢核</span>
+      <span class="kpi-value" id="kpi-checklist-value">0/9</span>
+      <span class="kpi-bar"><span class="kpi-bar-fill" id="kpi-checklist-fill"></span></span>
+    </div>
+    <div class="kpi-cell" id="kpi-rounds">
+      <span class="kpi-label">已跑輪數</span>
+      <span class="kpi-value" id="kpi-rounds-value">0</span>
+      <span class="kpi-sub" id="kpi-rounds-sub">情境：（尚無情境）</span>
+    </div>
+    <div class="kpi-cell" id="kpi-worldbook">
+      <span class="kpi-label">世界書條目</span>
+      <span class="kpi-value" id="kpi-worldbook-value">0</span>
+      <span class="kpi-sub" id="kpi-worldbook-sub"></span>
+    </div>
+    <div class="kpi-cell" id="kpi-calls">
+      <span class="kpi-label">Agent 呼叫</span>
+      <span class="kpi-value" id="kpi-calls-value">0</span>
+      <span class="kpi-sub" id="kpi-calls-sub"></span>
+    </div>
+  </div>
 
-  <section class="panel panel-wide" id="panel-compare-summary">
-    <h2>跨情境比較摘要</h2>
-    <div id="compare-summary"></div>
-  </section>
-</main>
+  <main id="scroll-main" class="scroll-main">
+
+    <section class="snap-section" id="section-checklist" data-section-index="0">
+      <div class="section-inner checklist-layout">
+        <div class="checklist-anchor">
+          <h2 class="two-line-title"><span class="title-zh">檢核表對話</span><span class="title-en">Checklist</span></h2>
+          <div class="anchor-fraction" id="checklist-fraction">0/9</div>
+          <p class="anchor-desc" id="checklist-anchor-desc"></p>
+        </div>
+        <div class="checklist-groups" id="checklist-groups"></div>
+      </div>
+    </section>
+
+    <section class="snap-section" id="section-draft" data-section-index="1">
+      <div class="section-inner">
+        <h2 class="two-line-title"><span class="title-zh">草稿預覽</span><span class="title-en">Draft</span></h2>
+
+        <div class="draft-banner">
+          <div class="draft-banner-name" id="draft-banner-name"></div>
+          <div class="draft-banner-desc" id="draft-banner-desc"></div>
+        </div>
+
+        <div class="draft-quadrants">
+          <div class="draft-quadrant panel-card">
+            <div class="quadrant-label">人物設定／世界觀</div>
+            <div id="draft-quadrant-cast" class="kv-block"></div>
+          </div>
+          <div class="draft-quadrant panel-card">
+            <div class="quadrant-label">情感偏好／技術欄位</div>
+            <div id="draft-quadrant-tech" class="kv-block"></div>
+          </div>
+        </div>
+
+        <div class="draft-quadrant panel-card field-fill-card">
+          <div class="quadrant-label">卡片欄位填寫率</div>
+          <div id="field-fill-bars"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="snap-section snap-section-autotest" id="section-autotest" data-section-index="2">
+      <div class="section-inner">
+        <div class="autotest-header">
+          <h2 class="two-line-title two-line-title-inverse"><span class="title-zh">自動測卡</span><span class="title-en">Autotest</span></h2>
+          <label class="scenario-select-label">
+            情境：
+            <select id="scenario-select"></select>
+          </label>
+        </div>
+
+        <div class="autotest-player">
+          <div id="transcript" class="transcript-scroll"></div>
+        </div>
+
+        <div class="autotest-chips" id="autotest-chips"></div>
+      </div>
+    </section>
+
+    <section class="snap-section" id="section-compare" data-section-index="3">
+      <div class="section-inner compare-layout">
+        <div class="compare-anchor anchor-empty" id="compare-anchor">
+          <h2 class="two-line-title two-line-title-inverse"><span class="title-zh">情境比較</span><span class="title-en">Compare</span></h2>
+          <div class="compare-anchor-body" id="compare-anchor-body"></div>
+        </div>
+
+        <div class="compare-right">
+          <div class="compare-toprow panel-card">
+            <h3>情境清單管理</h3>
+            <p class="hint">勾選要拿去比較的情境，狀態欄顯示這個情境目前是否已經 run_scenario 過。</p>
+            <div id="scenario-list" class="scroll-list"></div>
+          </div>
+
+          <div class="compare-cards-scroller">
+            <div id="compare-cards" class="compare-cards"></div>
+          </div>
+
+          <div class="compare-summary-panel panel-card">
+            <h3>跨情境變量比較</h3>
+            <div id="compare-summary"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="scroll-dots" class="scroll-dots" aria-hidden="true">
+    <span class="dot active" data-dot="0"></span>
+    <span class="dot" data-dot="1"></span>
+    <span class="dot" data-dot="2"></span>
+    <span class="dot" data-dot="3"></span>
+  </div>
+</div>
+
+<div id="console-drawer" class="console-drawer collapsed">
+  <button type="button" id="console-toggle" class="console-tab">
+    呼叫紀錄 <span class="console-tab-arrow" id="console-tab-arrow">▲</span>
+  </button>
+  <div class="console-body">
+    <h3 class="two-line-title subsection"><span class="title-zh">Agent 呼叫紀錄</span><span class="title-en">Activity Log</span></h3>
+    <p class="hint">
+      這裡不是聊天室——網站本身不呼叫任何 LLM。這是呼叫此頁面 WebMCP 工具的 Agent（或你在
+      DevTools 的 WebMCP 面板手動呼叫）留下的活動紀錄，用來確認工具真的有被呼叫、參數與回傳是否正確。
+    </p>
+    <div id="activity-log" class="scroll-list console-log"></div>
+  </div>
+</div>
 
 <script type="module" src="./main.js"></script>
 </body>

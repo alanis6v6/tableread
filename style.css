@@ -1,242 +1,724 @@
+/* ---------------------------------------------------------------------
+   Design tokens. Every color in this file comes from these variables --
+   no component below should hardcode a hex value.
+--------------------------------------------------------------------- */
 :root {
-  color-scheme: light dark;
-  --bg: #faf8f4;
-  --fg: #2b2620;
-  --panel-bg: #ffffff;
-  --border: #ddd3c4;
-  --muted: #7a6a55;
-  --accent: #8b6f47;
+  color-scheme: dark;
+
+  --color-bg: #0D1017;        /* page background */
+  --color-surface: #171B24;   /* card/panel background -- ALWAYS this, regardless of semantics (see hard rule below) */
+  --color-ink: #F1F3F8;       /* body text, primary borders on non-semantic elements */
+  --color-ink-muted: #3A4152; /* secondary text AND general/neutral borders -- the only muted token; there is no separate "faint" tier */
+  --color-structure: #3DDCFF; /* navigation / structural chrome accent */
+  --color-verified: #39FF88;  /* consistent / verified accent */
+  --color-warning: #FF4365;   /* alert / inconsistency accent */
+  --color-pending: #FFD23D;   /* pending / neutral-emphasis accent */
+
+  /* Derived, non-semantic neutral for the taskbar-expanded gutter -- a shade
+     darker than --color-bg, NOT a semantic color (see the taskbar section). */
+  --gutter-bg: color-mix(in srgb, var(--color-bg) 88%, black 12%);
+
+  --border-w: 2px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+
+  --taskbar-w: 232px;
+  --gutter: 22px;
+  --console-h: 40vh;
+  --kpi-strip-h: 68px;
 }
+
+/* -----------------------------------------------------------------------
+   HARD RULE -- read before touching any color in this file:
+
+   1. Neon accent colors (--color-structure/verified/warning/pending) may
+      ONLY be used for borders, glows, small icons, and tags/labels. They
+      must NEVER be the color of body text or of a large background fill.
+   2. Body copy is always --color-ink. Secondary text and ordinary
+      (non-semantic) borders are always --color-ink-muted.
+   3. Any large card/panel/section background is always --color-surface
+      (or --color-bg for the page canvas / a nested "recessed" block).
+      This never changes based on semantics -- semantics are communicated
+      entirely through a border + glow, never through a tinted background
+      fill. If you're about to write `background: var(--color-warning)` (or
+      any accent) on something bigger than a tag/pill/button, stop --
+      that's exactly the pattern this rule forbids.
+----------------------------------------------------------------------- */
 
 * { box-sizing: border-box; }
 
-body {
+html, body {
   margin: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
   font-family: -apple-system, "Noto Sans TC", "PingFang TC", sans-serif;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--color-bg);
+  color: var(--color-ink);
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-bg);
-}
-.topbar h1 { font-size: 16px; margin: 0; }
+.hidden { display: none !important; }
 
-.badge {
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 10px;
-  letter-spacing: 0.02em;
-}
-.badge-pending { background: #eee; color: #666; }
-.badge-ok { background: #e3f3e6; color: #2c7a3d; }
-.badge-warn { background: #fbf0d9; color: #92660f; }
-.badge-fail { background: #fbe4e4; color: #a3312f; }
-
-.layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 12px;
+/* ---------------------------------------------------------------------
+   Neon glow keyframes. Only used where explicitly wired up in JS (the
+   compare-section tag for a world-book entry in world_entries_triggered_in_some)
+   -- never applied page-wide or to any other standing element.
+--------------------------------------------------------------------- */
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 0 0 2px var(--color-warning), 0 0 8px 1px color-mix(in srgb, var(--color-warning) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 3px var(--color-warning), 0 0 16px 3px color-mix(in srgb, var(--color-warning) 65%, transparent);
+  }
 }
 
-.panel {
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+/* ---------------------------------------------------------------------
+   Neutral building blocks -- surface background, muted border, NO glow.
+   For plain content containers that carry no semantic meaning of their own.
+--------------------------------------------------------------------- */
+.panel-card {
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-ink-muted);
+  border-radius: var(--radius-sm);
   padding: 14px 16px;
   min-width: 0;
 }
-.panel-wide { grid-column: 1 / -1; }
 
-.panel h2 { font-size: 14px; margin: 0 0 8px; color: var(--accent); }
-.panel h3 { font-size: 12px; margin: 14px 0 6px; color: var(--muted); }
+/* two-line title: 中文主標 + tracked-out 英文副標 */
+.two-line-title { display: flex; flex-direction: column; gap: 2px; margin: 0 0 14px; }
+.two-line-title .title-zh { font-size: 18px; font-weight: 700; color: var(--color-ink); }
+.two-line-title .title-en {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.two-line-title.subsection .title-zh { font-size: 13px; font-weight: 600; }
+.two-line-title.subsection .title-en { font-size: 10px; }
+/* two-line-title-inverse existed for legibility on a saturated fill; no
+   element still uses a saturated fill under a title, but kept as a no-op
+   alias (title color is --color-ink either way) so no markup needs to change. */
+.two-line-title-inverse .title-zh { color: var(--color-ink); }
+.two-line-title-inverse .title-en { color: var(--color-ink-muted); }
 
-.hint { font-size: 11px; color: var(--muted); line-height: 1.5; margin: 0 0 10px; }
+.hint { font-size: 11px; color: var(--color-ink-muted); line-height: 1.5; margin: 0 0 10px; }
+
+/* Pill-shaped action buttons with a direction arrow -- outlined, not filled;
+   a soft glow gives them just enough weight without over-lighting the UI. */
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: var(--border-w) solid var(--color-ink-muted);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pill-btn.pill-structure {
+  border-color: var(--color-structure);
+  color: var(--color-structure);
+  box-shadow: 0 0 1px var(--color-structure), 0 0 6px 1px color-mix(in srgb, var(--color-structure) 45%, transparent);
+}
+.pill-btn.pill-verified {
+  border-color: var(--color-verified);
+  color: var(--color-verified);
+  box-shadow: 0 0 1px var(--color-verified), 0 0 6px 1px color-mix(in srgb, var(--color-verified) 45%, transparent);
+}
+.pill-btn.pill-muted { color: var(--color-ink-muted); border-color: var(--color-ink-muted); }
+.pill-btn .arrow { font-size: 13px; }
+
+/* Status tags/labels -- outlined, never filled. This is the one place neon
+   text is fine: a tag IS the "small label" the hard rule allows. */
+.status-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-ink-muted);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+.status-tag.tag-verified {
+  border-color: var(--color-verified);
+  color: var(--color-verified);
+  box-shadow: 0 0 1px var(--color-verified), 0 0 6px 1px color-mix(in srgb, var(--color-verified) 45%, transparent);
+}
+.status-tag.tag-warning {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+  box-shadow: 0 0 1px var(--color-warning), 0 0 6px 1px color-mix(in srgb, var(--color-warning) 45%, transparent);
+}
+.status-tag.tag-structure {
+  border-color: var(--color-structure);
+  color: var(--color-structure);
+  box-shadow: 0 0 1px var(--color-structure), 0 0 6px 1px color-mix(in srgb, var(--color-structure) 45%, transparent);
+}
+.status-tag.tag-neutral { border-color: var(--color-ink-muted); color: var(--color-ink-muted); }
+
+/* The one animated element in the whole page: a world-book entry tag inside
+   a compare-card that compare_scenarios flagged as triggered in SOME but not
+   all compared scenarios. Nothing else pulses. */
+.status-tag.tag-warning.pulse-warning {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------
+   Floating WebMCP status badge (fixed, doesn't participate in layout)
+--------------------------------------------------------------------- */
+.status-float {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 40;
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-ink-muted);
+  color: var(--color-ink-muted);
+  letter-spacing: 0.02em;
+}
+.badge-pending { border-color: var(--color-ink-muted); color: var(--color-ink-muted); }
+.badge-ok {
+  border-color: var(--color-verified);
+  color: var(--color-verified);
+  box-shadow: 0 0 1px var(--color-verified), 0 0 6px 1px color-mix(in srgb, var(--color-verified) 45%, transparent);
+}
+.badge-warn {
+  border-color: var(--color-pending);
+  color: var(--color-pending);
+  box-shadow: 0 0 1px var(--color-pending), 0 0 6px 1px color-mix(in srgb, var(--color-pending) 45%, transparent);
+}
+.badge-fail {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+  box-shadow: 0 0 1px var(--color-warning), 0 0 6px 1px color-mix(in srgb, var(--color-warning) 45%, transparent);
+}
+
+/* ---------------------------------------------------------------------
+   Left taskbar: collapsed = just a floating icon button, no frame at all.
+   Expanded = a persistent rail with mode pill + scenario nav.
+   Independent of the bottom console drawer -- separate element, separate
+   state, no shared toggle.
+
+   The rail itself is a large area, so per the hard rule its background is
+   --color-surface, not a solid structure fill; the structure accent shows
+   up only as its edge border + glow.
+--------------------------------------------------------------------- */
+.taskbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+}
+
+.taskbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-structure);
+  color: var(--color-structure);
+  box-shadow: 0 0 2px var(--color-structure), 0 0 12px 2px color-mix(in srgb, var(--color-structure) 55%, transparent);
+  cursor: pointer;
+}
+
+.taskbar.collapsed {
+  top: 16px;
+  left: 16px;
+}
+.taskbar.collapsed .taskbar-body { display: none; }
+
+.taskbar.expanded {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--taskbar-w);
+  height: 100vh;
+  background: var(--color-surface);
+  border-right: var(--border-w) solid var(--color-structure);
+  box-shadow: 0 0 2px var(--color-structure), 0 0 12px 1px color-mix(in srgb, var(--color-structure) 35%, transparent);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.taskbar.expanded .taskbar-toggle { align-self: flex-start; }
+
+.mode-switch {
+  display: flex;
+  gap: 6px;
+  background: var(--color-bg);
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  border: var(--border-w) solid var(--color-ink-muted);
+}
+.mode-pill {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+.mode-pill.active {
+  background: var(--color-surface);
+  color: var(--color-structure);
+  box-shadow: 0 0 1px var(--color-structure), 0 0 6px 1px color-mix(in srgb, var(--color-structure) 45%, transparent);
+}
+
+.taskbar-label { margin-bottom: 8px; }
+.taskbar-label .label-zh { display: block; font-size: 12px; font-weight: 700; color: var(--color-ink); }
+.taskbar-label .label-en {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.scenario-nav-list { display: flex; flex-direction: column; gap: 8px; }
+.scenario-nav-row {
+  background: var(--color-bg);
+  border: var(--border-w) solid var(--color-ink-muted);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.scenario-nav-row .nav-name { font-size: 12px; font-weight: 600; color: var(--color-ink); word-break: break-word; }
+.scenario-nav-row .nav-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.scenario-nav-empty { font-size: 11px; color: var(--color-ink-muted); }
+
+/* ---------------------------------------------------------------------
+   Bottom console drawer (Agent 呼叫紀錄). Fixed to the viewport bottom,
+   independent of the taskbar's own collapse/expand state -- its own toggle,
+   its own class, no shared variable. Purely a technical/diagnostic
+   surface, so it stays neutral (no semantic accent).
+--------------------------------------------------------------------- */
+.console-drawer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.console-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 18px;
+  border: var(--border-w) solid var(--color-structure);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--color-surface);
+  color: var(--color-structure);
+  box-shadow: 0 0 2px var(--color-structure), 0 0 10px 1px color-mix(in srgb, var(--color-structure) 40%, transparent);
+  cursor: pointer;
+}
+
+.console-drawer .console-body { display: none; }
+
+.console-drawer.expanded {
+  width: 100%;
+}
+.console-drawer.expanded .console-body {
+  display: block;
+  width: 100%;
+  height: var(--console-h);
+  background: var(--color-surface);
+  border-top: var(--border-w) solid var(--color-ink-muted);
+  padding: 16px clamp(16px, 5vw, 48px);
+  overflow-y: auto;
+}
+.console-drawer.expanded .console-tab { border-radius: 0 0 var(--radius-sm) var(--radius-sm); border-top: none; border-bottom: var(--border-w) solid var(--color-structure); }
+.console-drawer.expanded { flex-direction: column-reverse; }
+
+.console-log { max-height: none; border: none; box-shadow: none; padding: 0; background: transparent; }
+
+/* ---------------------------------------------------------------------
+   Content wrap: full-width when taskbar collapsed; framed + gutter when
+   taskbar is expanded. The gutter is a neutral shade (NOT a solid neon
+   fill) -- the "wrapped" feeling comes from a faint structure-colored glow
+   ringing the framed content, not from painting the whole gutter neon.
+--------------------------------------------------------------------- */
+.content-wrap {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body.taskbar-expanded .content-wrap {
+  margin-left: var(--taskbar-w);
+  width: calc(100% - var(--taskbar-w));
+  padding: var(--gutter);
+  background: var(--gutter-bg);
+  min-height: 100vh;
+}
+
+/* ---------------------------------------------------------------------
+   KPI strip -- persistent summary bar above the snap-scroll sections
+   (checklist completion / rounds run / world-book entries / agent calls).
+   Lives outside .snap-section so it never counts toward the 4 vertically-
+   snapped sections and stays visible no matter which one is in view. A
+   large area, so per the hard rule its background is --color-surface, not
+   a solid accent fill -- only the checklist fill bar and warn states use
+   accent color. Height is fixed (--kpi-strip-h) so .scroll-main below can
+   subtract it exactly and still fill the rest of the viewport.
+--------------------------------------------------------------------- */
+.kpi-strip {
+  height: var(--kpi-strip-h);
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--color-ink-muted);
+  border-bottom: var(--border-w) solid var(--color-ink-muted);
+  /* Clears the collapsed taskbar's fixed top-left icon button (top:16px,
+     left:16px, ~34px tall/~100px wide) so the first cell's text never sits
+     under it. Not needed once the taskbar is expanded -- content-wrap
+     itself is already pushed right by --taskbar-w then. */
+  padding-left: 108px;
+}
+body.taskbar-expanded .kpi-strip { padding-left: 0; }
+
+.kpi-cell {
+  flex: 1 1 150px;
+  min-width: 150px;
+  background: var(--color-surface);
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+}
+.kpi-label { font-size: 10px; color: var(--color-ink-muted); text-transform: uppercase; letter-spacing: .06em; }
+.kpi-value { font-size: 20px; font-weight: 800; font-family: ui-monospace, Menlo, monospace; color: var(--color-ink); }
+.kpi-bar { display: block; height: 4px; background: var(--color-ink-muted); border-radius: 2px; overflow: hidden; }
+.kpi-bar-fill { display: block; height: 100%; background: var(--color-structure); box-shadow: 0 0 4px var(--color-structure); }
+.kpi-sub { display: block; font-size: 10px; color: var(--color-ink-muted); min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi-sub.kpi-sub-warn { color: var(--color-warning); }
+
+.scroll-main {
+  height: calc(100vh - var(--kpi-strip-h));
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+}
+
+body.taskbar-expanded .scroll-main {
+  height: calc(100vh - (var(--gutter) * 2) - var(--kpi-strip-h));
+  border: var(--border-w) solid var(--color-structure);
+  border-radius: var(--radius-md);
+  /* Faint edge glow only -- this is the "wrapped in a frame" cue, not a
+     saturated fill (see hard rule above). */
+  box-shadow: 0 0 2px var(--color-structure), 0 0 14px 1px color-mix(in srgb, var(--color-structure) 30%, transparent);
+  background: var(--color-bg);
+}
+
+.snap-section {
+  min-height: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow-y: auto;
+  padding: clamp(20px, 4vw, 48px);
+}
+
+.section-inner { max-width: 1160px; }
+
+/* ---------------------------------------------------------------------
+   Scroll position dots (purely visual, non-interactive)
+--------------------------------------------------------------------- */
+.scroll-dots {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 30;
+}
+.scroll-dots .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: var(--border-w) solid var(--color-ink-muted);
+  background: var(--color-surface);
+}
+.scroll-dots .dot.active {
+  border-color: var(--color-structure);
+  background: var(--color-structure);
+  box-shadow: 0 0 1px var(--color-structure), 0 0 6px 1px color-mix(in srgb, var(--color-structure) 55%, transparent);
+}
+
+/* ---------------------------------------------------------------------
+   ① Checklist dialogue -- a narrow progress anchor on the left, three
+   grouped cards (not eight identical rows) on the right.
+--------------------------------------------------------------------- */
+.checklist-layout { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: start; }
+
+.checklist-anchor {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: var(--border-w) solid var(--color-structure);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 2px var(--color-structure), 0 0 12px 2px color-mix(in srgb, var(--color-structure) 55%, transparent);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+}
+.checklist-anchor .anchor-fraction { font-size: 42px; font-weight: 800; line-height: 1; color: var(--color-structure); }
+.checklist-anchor .anchor-desc { font-size: 12px; line-height: 1.6; color: var(--color-ink-muted); }
+
+.checklist-groups { display: flex; flex-direction: column; gap: 22px; }
+.checklist-group {
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-ink-muted);
+  border-radius: var(--radius-sm);
+  padding: 0;
+  overflow: hidden;
+}
+.checklist-group .group-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  padding: 12px 16px 8px;
+}
+.group-list { list-style: none; margin: 0; padding: 0; }
+.checklist-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--color-ink-muted);
+}
+.group-list .checklist-row:first-child { border-top: none; }
+/* Completion is shown by a verified accent edge, not a tinted background
+   fill (see hard rule above). */
+.checklist-row.is-done { border-left: 3px solid var(--color-verified); padding-left: 13px; }
+.checklist-index { font-size: 11px; font-weight: 700; color: var(--color-structure); min-width: 16px; }
+.checklist-icon { font-size: 13px; }
+.checklist-label { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; color: var(--color-ink); }
+.checklist-note { font-size: 11px; color: var(--color-ink-muted); }
 
 .scroll-list {
-  max-height: 360px;
+  max-height: 320px;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: var(--border-w) solid var(--color-ink-muted);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
   padding: 8px;
   font-size: 12px;
 }
 
-.log-entry { padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.log-entry { padding: 6px 0; border-bottom: 1px dashed var(--color-ink-muted); }
 .log-entry:last-child { border-bottom: none; }
-.log-entry .log-name { font-weight: 600; }
-.log-entry .log-error { color: #a3312f; }
-.log-entry pre { white-space: pre-wrap; word-break: break-all; margin: 4px 0 0; font-size: 11px; background: #f5f0e8; padding: 6px; border-radius: 4px; }
+.log-entry .log-name { font-weight: 700; color: var(--color-structure); }
+.log-entry .log-error { color: var(--color-warning); font-weight: 600; }
+.log-entry pre { white-space: pre-wrap; word-break: break-all; margin: 4px 0 0; font-size: 11px; background: var(--color-bg); color: var(--color-ink-muted); padding: 6px; border-radius: 6px; }
 
-.checklist-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.checklist-table td { padding: 4px 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
-.checklist-table .icon { width: 22px; text-align: center; }
-.checklist-table .note { color: var(--muted); }
-
-.draft-fields dt { font-size: 11px; color: var(--muted); margin-top: 8px; }
-.draft-fields dd { margin: 2px 0 0; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
-.draft-fields dd.empty { color: #b3a68f; font-style: italic; }
-
-.autotest-header { display: flex; align-items: center; justify-content: space-between; }
-.autotest-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
-.autotest-col h3 { margin-top: 0; }
-
-.round-block { border-bottom: 1px dashed var(--border); padding: 8px 0; }
-.round-block:last-child { border-bottom: none; }
-.round-label { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
-.bubble-player { background: #efe7d8; padding: 6px 10px; border-radius: 8px; margin: 4px 0; font-size: 12px; }
-.bubble-char { font-size: 12px; }
-
-.qa-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; }
-.qa-warning { color: #a3312f; }
-
-/* ---- Creator mode: KPI dashboard (option 1a) ------------------------- */
-
-.layout-1a { padding: 12px; }
-
-.dashboard-1a {
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
-  overflow-x: auto;
+/* ---------------------------------------------------------------------
+   ② Draft preview -- a name/description banner anchoring the section,
+   then two loose key-value quadrants (not a table), then the field-fill
+   bars (卡片欄位填寫率) as a third full-width card below them.
+--------------------------------------------------------------------- */
+.draft-banner {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: var(--border-w) solid var(--color-structure);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 2px var(--color-structure), 0 0 12px 2px color-mix(in srgb, var(--color-structure) 55%, transparent);
+  padding: 20px 24px;
+  margin-bottom: 22px;
 }
-.dashboard-1a-inner { min-width: 760px; }
+.draft-banner-name { font-size: 22px; font-weight: 800; color: var(--color-structure); }
+.draft-banner-desc { font-size: 13px; margin-top: 6px; color: var(--color-ink-muted); }
 
-.kpi-strip {
-  display: grid;
-  grid-template-columns: 280px 1fr 340px;
-  gap: 1px;
-  background: var(--border);
-}
-.kpi-cell-split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--border);
-}
-.kpi-cell { background: var(--panel-bg); padding: 14px 18px; }
-.kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.kpi-value { font-size: 26px; font-weight: 700; font-family: ui-monospace, Menlo, monospace; color: var(--fg); margin-top: 4px; }
-.kpi-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
-.kpi-bar-fill { height: 100%; background: var(--accent); }
-.kpi-sub { font-size: 10px; color: var(--muted); margin-top: 8px; min-height: 1.3em; }
-.kpi-sub.kpi-sub-warn { color: #a3312f; }
-
-.panels-1a {
-  display: grid;
-  grid-template-columns: 280px 1fr 340px;
-  background: var(--border);
-  gap: 1px;
-  border-top: 1px solid var(--border);
-}
-.panel-1a { background: var(--panel-bg); padding: 16px; min-width: 0; }
-.panel-1a h3 {
+.draft-quadrants { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.draft-quadrant { padding: 18px 20px; }
+.quadrant-label {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: .06em;
-  margin: 0 0 10px;
+  color: var(--color-ink-muted);
+  margin-bottom: 14px;
 }
-.panel-1a h3.panel-1a-subhead { margin-top: 16px; }
-.panel-1a-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.panel-1a-head h3 { margin: 0; }
-.panel-1a-head select {
-  margin-left: auto;
-  font-size: 10.5px;
-  padding: 2px 5px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--fg);
-}
-.panel-1a-divider { height: 1px; background: var(--border); margin: 10px 0; }
-
-.checklist-compact-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f1eee6; }
-.checklist-compact-row .icon { width: 16px; text-align: center; font-size: 12px; }
-.checklist-compact-row .label { font-size: 11.5px; color: var(--fg); flex: 1; }
-
-.field-bar { margin-bottom: 7px; }
-.field-bar-head { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); margin-bottom: 2px; }
-.field-bar-head .pct { font-family: ui-monospace, monospace; }
-.field-bar-track { height: 4px; background: #f1eee6; border-radius: 2px; overflow: hidden; }
-.field-bar-fill { height: 100%; background: var(--accent); }
-
-.log-compact-row {
-  font-size: 10.5px;
-  padding: 4px 0;
-  border-bottom: 1px solid #f1eee6;
-  font-family: ui-monospace, monospace;
-  color: var(--muted);
-  cursor: pointer;
-}
-.log-compact-row:last-child { border-bottom: none; }
-.log-compact-row.log-compact-error { color: #a3312f; }
-.log-compact-detail {
-  margin: 4px 0 6px;
-  padding: 6px;
-  background: #f5f0e8;
-  border-radius: 4px;
-  font-size: 10.5px;
-  white-space: pre-wrap;
-  word-break: break-all;
+.kv-block { display: flex; flex-direction: column; gap: 18px; }
+.kv-label { font-size: 11px; color: var(--color-ink-muted); letter-spacing: 0.02em; margin-bottom: 4px; }
+.kv-value { font-size: 13px; white-space: pre-wrap; word-break: break-word; color: var(--color-ink); }
+.kv-value.empty { color: var(--color-ink-muted); font-style: italic; }
+.kv-warning-card {
+  margin-top: 6px;
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-warning);
+  box-shadow: 0 0 1px var(--color-warning), 0 0 6px 1px color-mix(in srgb, var(--color-warning) 45%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--color-warning);
 }
 
-.mode-switch { display: flex; gap: 6px; margin-right: auto; margin-left: 12px; }
-.mode-btn {
+.field-fill-card { margin-top: 20px; }
+.field-bar { margin-bottom: 12px; }
+.field-bar:last-child { margin-bottom: 0; }
+.field-bar-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--color-ink-muted); margin-bottom: 4px; }
+.field-bar-head .pct { font-family: ui-monospace, Menlo, monospace; color: var(--color-ink); }
+.field-bar-track { height: 5px; background: var(--color-ink-muted); border-radius: 3px; overflow: hidden; }
+.field-bar-fill { height: 100%; background: var(--color-structure); box-shadow: 0 0 4px var(--color-structure); }
+
+/* ---------------------------------------------------------------------
+   ③ Autotest -- the section's own background stays neutral (surface, one
+   step off the page bg, per the hard rule); the "this is the featured
+   section" cue lives on the player window's pending-colored glow instead
+   of a full-bleed fill. Chat-style playback window + QA state chips that
+   only appear when the corresponding condition holds.
+--------------------------------------------------------------------- */
+.snap-section-autotest { background: var(--color-surface); }
+
+.autotest-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.scenario-select-label { font-size: 12px; color: var(--color-ink-muted); }
+.scenario-select-label select {
   font-size: 12px;
-  padding: 5px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--fg);
-  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: var(--border-w) solid var(--color-ink-muted);
+  background: var(--color-bg);
+  color: var(--color-ink);
 }
-.mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-.hidden { display: none !important; }
+.autotest-player {
+  background: var(--color-bg);
+  border: var(--border-w) solid var(--color-pending);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 2px var(--color-pending), 0 0 16px 3px color-mix(in srgb, var(--color-pending) 55%, transparent);
+  max-width: 640px;
+  margin: 24px auto;
+  padding: 22px 24px;
+}
+
+.transcript-scroll { max-height: 48vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.chat-round-label { font-size: 10px; color: var(--color-ink-muted); letter-spacing: 0.05em; margin-top: 8px; }
+.transcript-scroll .chat-round-label:first-child { margin-top: 0; }
+.chat-row { display: flex; }
+.chat-row.player { justify-content: flex-end; }
+.chat-row.char { justify-content: flex-start; }
+.chat-bubble { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.5; color: var(--color-ink); background: var(--color-surface); border: 1px solid var(--color-ink-muted); }
+.chat-bubble.player { border-color: var(--color-structure); border-bottom-right-radius: 4px; }
+.chat-bubble.char { border-bottom-left-radius: 4px; }
+
+.autotest-chips { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; min-height: 26px; }
+.qa-chip { font-weight: 700; }
+
+/* ---------------------------------------------------------------------
+   ④ Scenario comparison -- a warning/verified summary anchor on the left,
+   the (unchanged) horizontal-scroll card strip on the right, enlarged.
+--------------------------------------------------------------------- */
+.compare-layout { display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: start; }
+
+.compare-anchor {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: var(--border-w) solid var(--color-ink-muted);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+}
+.compare-anchor.anchor-warning {
+  border-color: var(--color-warning);
+  box-shadow: 0 0 2px var(--color-warning), 0 0 12px 2px color-mix(in srgb, var(--color-warning) 55%, transparent);
+}
+.compare-anchor.anchor-ok {
+  border-color: var(--color-verified);
+  box-shadow: 0 0 2px var(--color-verified), 0 0 12px 2px color-mix(in srgb, var(--color-verified) 55%, transparent);
+}
+.compare-anchor.anchor-empty { border-color: var(--color-ink-muted); }
+.compare-anchor-body { font-size: 12px; line-height: 1.7; color: var(--color-ink); }
+.compare-anchor-body strong { display: block; font-size: 13px; margin-bottom: 4px; }
+.compare-anchor-body .hint { color: var(--color-ink-muted); opacity: 1; margin: 8px 0 0; }
+
+.compare-right { min-width: 0; }
+.compare-toprow { margin-bottom: 18px; }
 
 .scenario-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px dashed var(--border);
+  gap: 10px;
+  padding: 7px 4px;
+  border-bottom: 1px dashed var(--color-ink-muted);
   font-size: 12px;
 }
 .scenario-row:last-child { border-bottom: none; }
-.scenario-row .scenario-label { flex: 1; }
-.scenario-row .scenario-status { color: var(--muted); }
+.scenario-row .scenario-label { flex: 1; font-weight: 600; color: var(--color-ink); }
+.scenario-row .scenario-status { flex-shrink: 0; }
+.scenario-row input[type="checkbox"] { flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--color-structure); }
 
-.compare-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.compare-cards-scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+}
+.compare-cards { display: flex; gap: 20px; }
 .compare-card {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 10px;
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-ink-muted);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
   font-size: 12px;
-  min-width: 0;
+  color: var(--color-ink);
+  flex: 0 0 340px;
+  scroll-snap-align: start;
 }
-.compare-card h4 { margin: 0 0 6px; font-size: 13px; color: var(--accent); }
-.compare-card .compare-char { margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
-.compare-card .compare-vars { margin: 0; font-size: 11px; background: #f5f0e8; padding: 6px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
-
-.compare-alert {
-  background: #fbe4e4;
-  color: #a3312f;
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 12px;
-  margin-bottom: 10px;
+.compare-card.has-warning {
+  border-color: var(--color-warning);
+  box-shadow: 0 0 2px var(--color-warning), 0 0 12px 2px color-mix(in srgb, var(--color-warning) 55%, transparent);
 }
-.compare-alert.compare-alert-ok { background: #e3f3e6; color: #2c7a3d; }
+.compare-card h4 { margin: 0 0 8px; font-size: 14px; color: var(--color-ink); }
+.compare-card .round-label { font-size: 10px; color: var(--color-ink-muted); letter-spacing: 0.05em; }
+.compare-card .compare-char { margin: 8px 0; white-space: pre-wrap; word-break: break-word; }
+.compare-card .compare-vars { margin: 0; font-size: 11px; background: var(--color-bg); color: var(--color-ink-muted); padding: 8px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
+.compare-card .compare-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
 
-.compare-table { border-collapse: collapse; width: 100%; font-size: 12px; }
-.compare-table th, .compare-table td { border: 1px solid var(--border); padding: 4px 6px; text-align: left; vertical-align: top; }
-.compare-table th { background: #f5f0e8; color: var(--muted); font-weight: 600; }
+.compare-summary-panel { margin-top: 4px; }
+
+.compare-table { border-collapse: collapse; width: 100%; font-size: 12px; color: var(--color-ink); }
+.compare-table th, .compare-table td { border: var(--border-w) solid var(--color-ink-muted); padding: 5px 7px; text-align: left; vertical-align: top; }
+.compare-table th { background: var(--color-bg); color: var(--color-ink); font-weight: 700; }
