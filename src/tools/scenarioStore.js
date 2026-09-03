@@ -4,29 +4,31 @@
 // eventual game-publisher mode (many scenarios compared side by side) --
 // this store doesn't need to change for that, only the UI consuming it does.
 
+import { t } from "../i18n.js";
+
 export function createScenarioStore(draftStore) {
-  const custom = []; // { id, label, text }
+  const custom = []; // { id, text } -- label is resolved per current language
 
   function listScenarios() {
     const snapshot = draftStore.getSnapshot();
     const scenarios = [];
 
     if (snapshot.fields.first_mes) {
-      scenarios.push({ id: "first_mes", label: "開場白（first_mes）", text: snapshot.fields.first_mes });
+      scenarios.push({ id: "first_mes", label: t("scenario.firstMes"), text: snapshot.fields.first_mes });
     }
     snapshot.fields.alternate_greetings.forEach((text, i) => {
-      scenarios.push({ id: `alt_${i}`, label: `替代開場 ${i + 1}`, text });
+      scenarios.push({ id: `alt_${i}`, label: t("scenario.altGreeting", i + 1), text });
     });
-    for (const c of custom) scenarios.push({ ...c });
+    for (const c of custom) scenarios.push({ id: c.id, label: t("scenario.custom"), text: c.text });
 
     return scenarios;
   }
 
   function addScenario(description) {
     const id = `custom_${custom.length}`;
-    const scenario = { id, label: "自訂情境", text: String(description ?? "") };
+    const scenario = { id, text: String(description ?? "") };
     custom.push(scenario);
-    return { ...scenario };
+    return { id, label: t("scenario.custom"), text: scenario.text };
   }
 
   function findScenario(scenarioId) {

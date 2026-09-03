@@ -97,7 +97,11 @@ const STRINGS = {
     "hint.pickForSummary": "勾選情境後才能算跨情境比較摘要。",
     "hint.cannotCompare": (ids) => `尚未執行、無法比較：${ids}`,
 
+    "list.sep": "、",
     "select.noScenarios": "（尚無情境）",
+    "scenario.firstMes": "開場白",
+    "scenario.altGreeting": (n) => `替代開場 ${n}`,
+    "scenario.custom": "自訂情境",
     "scenario.ran": (n) => `已執行 ${n} 輪`,
     "scenario.notRun": "尚未執行",
     "scenario.rowLabel": (label, id) => `${label}（${id}）`,
@@ -161,7 +165,11 @@ const STRINGS = {
     "hint.pickForSummary": "Check some scenarios to compute the cross-scenario comparison.",
     "hint.cannotCompare": (ids) => `Not run yet, can't compare: ${ids}`,
 
+    "list.sep": ", ",
     "select.noScenarios": "(No scenarios yet)",
+    "scenario.firstMes": "Opening line",
+    "scenario.altGreeting": (n) => `Alternate greeting ${n}`,
+    "scenario.custom": "Custom scenario",
     "scenario.ran": (n) => `${n} round${n === 1 ? "" : "s"} run`,
     "scenario.notRun": "not run yet",
     "scenario.rowLabel": (label, id) => `${label} (${id})`,
