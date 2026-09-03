@@ -5,7 +5,7 @@
 **English speakers**: see [`docs/submission.md`](./docs/submission.md) for a full English write-up (the pain, why WebMCP, what's newly possible, implementation) — this README's body is otherwise in Traditional Chinese, the project's primary language. The app itself has a 中/EN toggle (or open it with `?lang=en`); the WebMCP tool descriptions follow it, so the agent reads whichever language you're working in.
 
 - **Live demo**: https://alanis6v6.github.io/tableread/
-- **Demo 影片**: TODO（#10 完成後回填）
+- **Demo 影片**: https://youtu.be/QgMt0yT2CeI
 
 ## Quick start
 
